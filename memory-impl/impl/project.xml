@@ -62,6 +62,14 @@
 
 		<!-- java source -->
 		<sourceDirectory>src/java</sourceDirectory>
+  <resources>
+      <resource>
+        <directory>${basedir}/src/java</directory>
+        <includes>
+          <include>**/*.xml</include>
+        </includes>
+      </resource>
+    </resources><!-- java source -->
 
 	</build>
 
