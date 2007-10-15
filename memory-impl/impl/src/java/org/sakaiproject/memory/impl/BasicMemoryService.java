@@ -150,6 +150,17 @@ public abstract class BasicMemoryService implements MemoryService, Observer
 	 * MemoryService implementation
 	 *********************************************************************************************************************************************************************************************************************************************************/
 
+
+   public Cache newCache(String cacheName) {
+      return new MemCache(this, eventTrackingService(),
+            instantiateCache(cacheName, true));
+   }
+
+   public Cache newCache(String cacheName, String pattern) {
+      return new MemCache(this, eventTrackingService(), pattern,
+            instantiateCache(cacheName, true));
+   }
+
 	/**
 	 * Return the amount of available memory.
 	 * 
@@ -259,7 +270,7 @@ public abstract class BasicMemoryService implements MemoryService, Observer
 
 		// run the garbage collector now
 		System.runFinalization();
-		System.gc();
+		//System.gc(); // DO NOT CALL THIS! It is a bad idea AND ehcache explicitly requires this to be disabled to work correctly -AZ
 
 		M_log.info("doReset():  Low Memory Recovery to: " + Runtime.getRuntime().freeMemory());
 
@@ -267,21 +278,23 @@ public abstract class BasicMemoryService implements MemoryService, Observer
 
 	/**
 	 * Register as a cache user
-	 * @deprecated
+	 * @deprecated not needed with ehcache
 	 */
 	synchronized public void registerCacher(Cacher cacher)
 	{
 		// not needed with ehcache
+	   M_log.warn("deprecated method that does nothing");
 
 	} // registerCacher
 
 	/**
 	 * Unregister as a cache user
-	 * @deprecated
+	 * @deprecated not needed with ehcache
 	 */
 	synchronized public void unregisterCacher(Cacher cacher)
 	{
 		// not needed with ehcache
+      M_log.warn("deprecated method that does nothing");
 
 	} // unregisterCacher
 
@@ -291,6 +304,7 @@ public abstract class BasicMemoryService implements MemoryService, Observer
 	 */
 	public Cache newCache(CacheRefresher refresher, String pattern)
 	{
+      M_log.warn("deprecated method, do NOT use");
 		return new MemCache(this, eventTrackingService(), refresher, pattern,
 				instantiateCache("MemCache", true));
 	}
@@ -301,6 +315,7 @@ public abstract class BasicMemoryService implements MemoryService, Observer
 	 */
 	public Cache newHardCache(CacheRefresher refresher, String pattern)
 	{
+      M_log.warn("deprecated method, do NOT use");
 		return new HardCache(this, eventTrackingService(), refresher, pattern,
 				instantiateCache("HardCache", true));
 	}
@@ -311,6 +326,7 @@ public abstract class BasicMemoryService implements MemoryService, Observer
 	 */
 	public Cache newHardCache(long sleep, String pattern)
 	{
+      M_log.warn("deprecated method, do NOT use");
 		return new HardCache(this, eventTrackingService(), sleep, pattern,
 				instantiateCache("HardCache", true));
 	}
@@ -321,6 +337,7 @@ public abstract class BasicMemoryService implements MemoryService, Observer
 	 */
 	public Cache newCache(CacheRefresher refresher, long sleep)
 	{
+      M_log.warn("deprecated method, do NOT use");
 		return new MemCache(this, eventTrackingService(), refresher, sleep,
 				instantiateCache("MemCache", true));
 	}
@@ -331,6 +348,7 @@ public abstract class BasicMemoryService implements MemoryService, Observer
 	 */
 	public Cache newHardCache(CacheRefresher refresher, long sleep)
 	{
+      M_log.warn("deprecated method, do NOT use");
 		return new MemCache(this, eventTrackingService(), refresher, sleep,
 				instantiateCache("HardCache", true));
 	}
@@ -341,6 +359,7 @@ public abstract class BasicMemoryService implements MemoryService, Observer
 	 */
 	public Cache newCache()
 	{
+      M_log.warn("deprecated method, do NOT use");
 		return new MemCache(this, eventTrackingService(),
 				instantiateCache("MemCache", true));
 	}
@@ -351,6 +370,7 @@ public abstract class BasicMemoryService implements MemoryService, Observer
 	 */
 	public Cache newHardCache()
 	{
+      M_log.warn("deprecated method, do NOT use");
 		return new HardCache(this, eventTrackingService(),
 				instantiateCache("HardCache", true));
 	}
@@ -361,6 +381,7 @@ public abstract class BasicMemoryService implements MemoryService, Observer
 	 */
 	public MultiRefCache newMultiRefCache(long sleep)
 	{
+      M_log.warn("deprecated method, do NOT use");
 		return new MultiRefCacheImpl(
 				this,
 				eventTrackingService(),
@@ -397,12 +418,12 @@ public abstract class BasicMemoryService implements MemoryService, Observer
 	}
 	
 	/**
-	 * 
+	 * Create a cache or get the cache out of ComponentManager
 	 * @param cacheName
 	 * @param legacyMode
 	 *            If true always create a new Cache. If false, cache must be
 	 *            defined in bean factory.
-	 * @return
+	 * @return a cache instance
 	 */
 	private Ehcache instantiateCache(String cacheName, boolean legacyMode)
 	{
@@ -439,6 +460,7 @@ public abstract class BasicMemoryService implements MemoryService, Observer
 		Ehcache cache = null;
 		
 		// try to locate a named cache in the bean factory
+		// TODO - do not use the component manager directly, use spring instead? -AZ
 		try {
 			cache = (Ehcache) ComponentManager.get(name);
 		} catch (Throwable e) {
@@ -475,26 +497,19 @@ public abstract class BasicMemoryService implements MemoryService, Observer
 
 	public Cache newCache(String cacheName, CacheRefresher refresher,
 			String pattern) {
+      M_log.warn("deprecated method, do NOT use");
 		return new MemCache(this, eventTrackingService(), refresher, pattern,
 				instantiateCache(cacheName, true));
 	}
 
-	public Cache newCache(String cacheName, String pattern) {
-		return new MemCache(this, eventTrackingService(), pattern,
-				instantiateCache(cacheName, true));
-	}
-
 	public Cache newCache(String cacheName, CacheRefresher refresher) {
+      M_log.warn("deprecated method, do NOT use");
 		return new MemCache(this, eventTrackingService(), refresher,
 				instantiateCache(cacheName, true));
 	}
 
-	public Cache newCache(String cacheName) {
-		return new MemCache(this, eventTrackingService(),
-				instantiateCache(cacheName, true));
-	}
-
 	public MultiRefCache newMultiRefCache(String cacheName) {
+      M_log.warn("deprecated method, do NOT use");
 		return new MultiRefCacheImpl(
 				this,
 				eventTrackingService(),

@@ -27,6 +27,8 @@ import org.sakaiproject.event.api.Event;
  * <p>
  * Utility API for classes that will refresh a cache entry when expired.
  * </p>
+ * @deprecated 07/OCT/2007 - Refreshing the cache objects manually is no longer supported, 
+ * this method will simply "fail safe" by never being called
  */
 public interface CacheRefresher
 {

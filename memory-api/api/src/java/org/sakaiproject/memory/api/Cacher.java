@@ -29,17 +29,17 @@ package org.sakaiproject.memory.api;
  * Cachers may be asked to clear their caches to free up memory or re-sync with external stores.
  * </p>
  */
-public interface Cacher
-{
-	/**
-	 * Clear out as much as possible anything cached; re-sync any cache that is needed to be kept.
+public interface Cacher {
+
+   /**
+	 * Clear out all entries from this cache
 	 */
 	void resetCache();
 
 	/**
 	 * Return the size of the cacher - indicating how much memory in use.
 	 * 
-	 * @return The size of the cacher.
+	 * @return Number of objects in this cache
 	 */
 	long getSize();
 
@@ -49,4 +49,5 @@ public interface Cacher
 	 * @return The cacher's description.
 	 */
 	String getDescription();
+
 }

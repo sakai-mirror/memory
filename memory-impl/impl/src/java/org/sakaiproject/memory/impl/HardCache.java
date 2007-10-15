@@ -29,7 +29,7 @@ import org.sakaiproject.memory.api.CacheRefresher;
 /**
  * <p>
  * HardCache is a MemCache set to use hard, not soft references.
- * @deprecated
+ * @deprecated Sept 2007 Lance Speelmon
  * </p>
  */
 public class HardCache extends MemCache
