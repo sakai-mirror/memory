@@ -48,6 +48,12 @@
          <version>${sakai.version}</version>
       </dependency>
 
+      <dependency>
+         <groupId>org.sakaiproject</groupId>
+         <artifactId>sakai-tool-api</artifactId>
+         <version>${sakai.version}</version>
+      </dependency>
+
       <!-- external -->
       <dependency>
          <groupId>${sakai.ehcache.groupId}</groupId>
