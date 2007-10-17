@@ -24,9 +24,9 @@ package org.sakaiproject.memory.api;
 import java.util.Collection;
 
 /**
- * <p>
  * MultiRefCache is a cache that holds objects and a set of references that the cached entry are dependent on - if any change, the entry is invalidated.
- * </p>
+ * @deprecated This is no longer supported, invalidate the entries in your own code instead, 
+ * stop using this immediately as it will be deprecated shortly 07/Oct/2007 -AZ
  */
 public interface MultiRefCache extends Cache
 {
@@ -43,6 +43,7 @@ public interface MultiRefCache extends Cache
 	 *        One entity reference that, if changed, will invalidate this entry.
 	 * @param azgIds
 	 *        AuthzGroup ids that, if the changed, will invalidate this entry.
+	 * @deprecated no longer supported, invalidate the entries in your own code instead
 	 */
 	void put(Object key, Object payload, int duration, String ref, Collection azgIds);
 }

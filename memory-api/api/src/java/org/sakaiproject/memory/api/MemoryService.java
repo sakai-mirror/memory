@@ -22,8 +22,7 @@
 package org.sakaiproject.memory.api;
 
 /**
- * MemoryService is the primary interface for the Sakai Memory service.
- * <p/>
+ * MemoryService is the primary interface for the Sakai Memory service<br/>
  * This provides programmatic access to centralized caching in Sakai and methods for tracking memory use
  * 
  * @author Glenn Golden (ggolden@umich.edu)
@@ -33,36 +32,57 @@ package org.sakaiproject.memory.api;
 public interface MemoryService {
 
    /**
-	 * Report the amount of available memory.
-	 * 
-	 * @return the amount of available memory.
+	 * Report the amount of unused and available memory for the JVM
+	 * @return free memory in bytes
 	 */
 	long getAvailableMemory();
 
    /**
     * Get a status report of memory cache usage
-    * 
-    * @return A string representing the current cache status
+    * @return A string representing the current status of all caches
     */
    String getStatus();
 
 	/**
-	 * Cause less memory to be used by clearing any optional caches,
-	 * note that this used to cause a GC but that is no longer happening, now only the caches are being cleared
-	 * 
-	 * @exception PermissionException
-	 *            if the current user does not have permission to do this.
+	 * Cause less memory to be used by clearing all caches,
+	 * note that this used to cause a GC but that is no longer happening, 
+	 * now only the caches are being cleared
+	 * @exception PermissionException if the current user does not have super user permissions
 	 */
 	void resetCachers() throws MemoryPermissionException;
-
 
    /**
     * Construct a Cache with the given name (often this is the fully qualified classpath of the api 
     * for the service that is being cached or the class if there is no api).
-    * No automatic refresh handling.
-    * @param cacheName Load a defined bean from ComponentManager or create a default cache with this name.
+    * @param cacheName Load a defined bean from the application context with this name or create a default cache with this name
+    * @return a cache which can be used to store objects
     */
    Cache newCache(String cacheName);
+
+   /**
+    * Construct a Cache with the given name (often this is the fully qualified classpath of the api 
+    * for the service that is being cached or the class if there is no api).
+    * Automatic refresh handling if refresher is not null.
+    * @param cacheName Load a defined bean from the application context with this name or create a default cache with this name
+    * @param refresher The object that will handle refreshing of entries which are not found
+    * @return a cache which can be used to store objects
+    */
+   Cache newCache(String cacheName, CacheRefresher refresher);
+
+   /**
+    * Construct a Cache with the given name (often this is the fully qualified classpath of the api 
+    * for the service that is being cached or the class if there is no api).
+    * Automatic refresh handling if refresher is not null and notification of cache changes
+    * if notifier is not null.
+    * @param cacheName Load a defined bean from the application context with this name or create a default cache with this name
+    * @param refresher The object that will handle refreshing of entries which are not found
+    * @param notifer The object that will handle notifications which are a result of cache changes
+    * @return a cache which can be used to store objects
+    */
+   Cache newCache(String cacheName, CacheRefresher refresher, DerivedCache notifer);
+
+
+   // TODO - DEPRECATED METHODS BELOW - remove in next release (07/Oct/2007)
 
    /**
     * Construct a Cache. Attempts to keep complete on Event notification by calling the refresher.
@@ -70,18 +90,9 @@ public interface MemoryService {
     * @param cacheName Load a defined bean from ComponentManager or create a default cache with this name.
     * @param pattern
     *        The "startsWith()" string for all resources that may be in this cache - if null, don't watch events for updates.
+    * @deprecated pattern matching no longer needed or supported, 07/Oct/2007 -AZ
     */
    Cache newCache(String cacheName, String pattern);
-
-   /**
-    * Construct a Cache. Automatic refresh handling if refresher is not null.
-    * 
-    * @param cacheName Load a defined bean from ComponentManager or create a default cache with this name.
-    * @param refresher
-    *        The object that will handle refreshing of expired entries.
-    * @deprecated Since 12/Oct/2007 - no longer supporting cache refreshers
-    */
-   Cache newCache(String cacheName, CacheRefresher refresher);
 
   /**
     * Construct a Cache. Attempts to keep complete on Event notification by calling the refresher.
@@ -90,12 +101,10 @@ public interface MemoryService {
     * @param refresher
     *        The object that will handle refreshing of event notified modified or added entries.
     * @param pattern
-    *        The "startsWith()" string for all resources that may be in this cache - if null, don't watch events for updates.
-    * @deprecated Since 12/Oct/2007 - no longer supporting cache refreshers
+    *        The "startsWith()" string for all resources that may be in this cache - if null, don't watch events for updates
+    * @deprecated pattern matching no longer needed or supported, 07/Oct/2007 -AZ
     */
    Cache newCache(String cacheName, CacheRefresher refresher, String pattern);
-
-	
 	
 	/**
 	 * Register as a cache user

@@ -24,24 +24,33 @@ package org.sakaiproject.memory.api;
 import org.sakaiproject.event.api.Event;
 
 /**
- * <p>
+ * This defines a kind of listener method which will be called whenever a cache miss occurs.
+ * In other words, if the cache is asked to retrieve an object by a key which does not exist
+ * in the cache then this method will be called if defined for that cache. Then the returned
+ * value will be returned from the lookup (or a null of no new value was found) and
+ * also inserted into the cache (unless the value was null)<br/>
+ * <b>WARNING:</b> This can make your cache misses very costly so you will want to be careful
+ * about what you make this method actually do
+ * <br/>
+ * Original comment:<br/>
  * Utility API for classes that will refresh a cache entry when expired.
- * </p>
- * @deprecated 07/OCT/2007 - Refreshing the cache objects manually is no longer supported, 
- * this method will simply "fail safe" by never being called
  */
-public interface CacheRefresher
-{
-	/**
-	 * Get a new value for this key whose value has already expired in the cache.
+public interface CacheRefresher {
+
+   /**
+    * Attempt to retrieve a value for this key from the cache user when none can be found in the cache
 	 * 
 	 * @param key
-	 *        The key whose value has expired and needs to be refreshed.
-	 * @param oldValue
+    *        The cache key whose value was not found in the cache
+	 * @param oldValue (ALWAYS NULL)
 	 *        The old exipred value of the key.
-	 * @param event
+	 * @param event (ALWAYS NULL)
 	 *        The event which triggered this refresh.
-	 * @return a new value for use in the cache for this key; if null, the entry will be removed.
+    * @return a new value for use in the cache for this key or null if no value exists for this item
+	 * @deprecated this method will eventually drop the oldValue and event params and be replaced
+	 * by one with a signature like: Object refresh(Object key); 07/Oct/2007
 	 */
 	public Object refresh(Object key, Object oldValue, Event event);
+//   public Object refresh(Object key);
+
 }
