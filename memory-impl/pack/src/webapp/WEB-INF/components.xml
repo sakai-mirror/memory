@@ -5,26 +5,24 @@
 
 	<bean id="org.sakaiproject.memory.api.MemoryService"
 			class="org.sakaiproject.memory.impl.BasicMemoryService"
-			init-method="init"
-			destroy-method="destroy"
-			singleton="true">
-
- 		<lookup-method name="eventTrackingService" bean="org.sakaiproject.event.api.EventTrackingService" />
- 		<lookup-method name="securityService" bean="org.sakaiproject.authz.api.SecurityService" />
- 		<lookup-method name="usageSessionService" bean="org.sakaiproject.event.api.UsageSessionService" />
-
+			init-method="init" destroy-method="destroy">
  		<property name="cacheLogging"><value>false</value></property>
- 		
-  		<property name="cacheManager"><ref bean="org.sakaiproject.memory.api.MemoryService.cacheManager"/></property>
+		<property name="cacheManager" ref="org.sakaiproject.memory.api.MemoryService.cacheManager" />
+		<property name="securityService" ref="org.sakaiproject.authz.api.SecurityService" />
+		<property name="sessionManager" ref="org.sakaiproject.tool.api.SessionManager" />
+	<!-- TODO - remove this injection -AZ -->
+		<property name="eventTrackingService" ref="org.sakaiproject.event.api.EventTrackingService" />
 	</bean>
 
 
-	<bean id="org.sakaiproject.memory.api.MemoryService.cacheManager" class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean">
+	<bean id="org.sakaiproject.memory.api.MemoryService.cacheManager" 
+			class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean">
   		<property name="configLocation">
-    	<value>classpath:org/sakaiproject/memory/api/ehcache.xml</value>
+    		<value>classpath:org/sakaiproject/memory/api/ehcache.xml</value>
   		</property>
 	</bean>
 
+	<!-- deprecated bean (this is the extra cache used by the multirefcache which is no longer supported) -->
 	<bean id="org.sakaiproject.memory.MemoryService.mref_map" 
   			class="org.springframework.cache.ehcache.EhCacheFactoryBean">
   		<property name="cacheManager"><ref bean="org.sakaiproject.memory.api.MemoryService.cacheManager"/></property>

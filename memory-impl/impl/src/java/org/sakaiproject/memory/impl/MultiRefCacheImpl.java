@@ -47,6 +47,7 @@ import org.sakaiproject.memory.api.MultiRefCache;
  * Manipulation of this map is synchronized. This map is not used for cache access, just when items are added and removed.<br />
  * The cache map itself becomes synchronized when it's manipulated (not when reads occur), so this added sync. for the refs fits the existing pattern.
  * </p>
+ * @deprecated no longer supported, invalidate the entries in your own code instead
  */
 public class MultiRefCacheImpl extends MemCache implements MultiRefCache,
 		CacheEventListener 

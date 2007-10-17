@@ -42,7 +42,9 @@ import org.sakaiproject.memory.api.CacheRefresher;
 import org.sakaiproject.memory.api.DerivedCache;
 
 /**
- * A Cache of objects with keys with a limited lifespan.
+ * An abstraction of the caching system for Sakai<br/>
+ * This allows the developer to access a cache created for their use,
+ * create this cache using the {@link MemoryService}
  */
 public class MemCache implements Cache, Observer
 {
@@ -73,18 +75,14 @@ public class MemCache implements Cache, Observer
    /** The events we are holding for later processing. */
    protected List<Event> m_heldEvents = new Vector<Event>();
 
-   /** Constructor injected memory service. */
+   // these are just class variables
    protected BasicMemoryService m_memoryService = null;
-
-   /** Constructor injected event tracking service. */
    protected EventTrackingService m_eventTrackingService = null;
-
-   /** My (optional) DerivedCache. */
    protected DerivedCache m_derivedCache = null;
 
    /**
     * The cache entry. Holds a time stamped payload.
-    * @deprecated No longer used for main cache -AZ
+    * @deprecated No longer used for main cache, will be removed -AZ
     */
    protected class CacheEntry extends SoftReference
    {
@@ -137,20 +135,8 @@ public class MemCache implements Cache, Observer
                // ask the refresher for the value
                payload = m_refresher.refresh(key, null, null);
 
-               if (m_memoryService.getCacheLogging())
-               {
-                  M_log.info("cache miss: refreshing: key: " + key + " new payload: " + payload);
-               }
-
                // store this new value
                put(key, payload);
-            }
-            else
-            {
-               if (m_memoryService.getCacheLogging())
-               {
-                  M_log.info("cache miss: no refresh: key: " + key);
-               }
             }
          }
 
@@ -159,8 +145,29 @@ public class MemCache implements Cache, Observer
 
    } // CacheEntry
 
+
+   /**
+    * Create a MemCache object which gives us access to the cache and applies the
+    * refresher (if one is supplied), <br/>
+    * Note that the recommended usage is to simply
+    * get a cache from the EhCache service instead
+    * @param memoryService the Sakai memory service
+    * @param cache an ehCache (already initialized)
+    * @param refresher (optional) an object that implements {@link CacheRefresher} or null
+    * @param notifier (optional) an object that implements {@link DerivedCache} or null
+    */
+   public MemCache(BasicMemoryService memoryService, Ehcache cache, CacheRefresher refresher, DerivedCache notifier) {
+      // inject our dependencies
+      m_memoryService = memoryService;
+      m_refresher = refresher;
+      m_derivedCache = notifier;
+      this.cache = cache;
+      m_eventTrackingService = null;
+   }
+
    /**
     * Construct the Cache. No automatic refresh handling.
+    * @deprecated 07/Oct/2007 -AZ
     */
    public MemCache(BasicMemoryService memoryService,
          EventTrackingService eventTrackingService, Ehcache cache)
@@ -178,12 +185,14 @@ public class MemCache implements Cache, Observer
     *        The object that will handle refreshing of event notified modified or added entries.
     * @param pattern
     *        The "startsWith()" string for all resources that may be in this cache - if null, don't watch events for updates.
+    * @deprecated 07/Oct/2007 -AZ
     */
    public MemCache(BasicMemoryService memoryService,
          EventTrackingService eventTrackingService,
          CacheRefresher refresher, String pattern, Ehcache cache)
    {
       this(memoryService, eventTrackingService, cache);
+      M_log.warn("deprecated method, do not use");
       m_resourcePattern = pattern;
       if (refresher != null)
       {
@@ -211,6 +220,7 @@ public class MemCache implements Cache, Observer
          CacheRefresher refresher, long sleep, Ehcache cache)
    {
       this(memoryService, eventTrackingService, cache);
+      M_log.warn("deprecated method, do not use");
       if (refresher != null)
       {
          m_refresher = refresher;
@@ -229,6 +239,7 @@ public class MemCache implements Cache, Observer
          CacheRefresher refresher, Ehcache cache)
    {
       this(memoryService, eventTrackingService, cache);
+      M_log.warn("deprecated method, do not use");
       if (refresher != null)
       {
          m_refresher = refresher;
@@ -249,6 +260,7 @@ public class MemCache implements Cache, Observer
          String pattern, Ehcache cache)
    {
       this(memoryService, eventTrackingService, pattern, cache);
+      M_log.warn("deprecated method, do not use");
    }
 
    /**
@@ -258,12 +270,14 @@ public class MemCache implements Cache, Observer
     *        The number of seconds to sleep between expiration checks.
     * @param pattern
     *        The "startsWith()" string for all resources that may be in this cache - if null, don't watch events for expiration.
+    *  
     */
    public MemCache(BasicMemoryService memoryService,
          EventTrackingService eventTrackingService, String pattern,
          Ehcache cache)
    {
       this(memoryService, eventTrackingService, cache);
+      M_log.warn("deprecated method, do not use");
       m_resourcePattern = pattern;
 
       // register to get events - first, before others
