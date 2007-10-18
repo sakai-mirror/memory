@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<artifactId>memory-base</artifactId>
+		<groupId>org.sakaiproject</groupId>
+		<version>M2</version>
+		<relativePath>../pom.xml</relativePath>
+	</parent>
+	<description>Common Deployment Descriptor for memory</description>
+	<name>sakai-memory-common-deployer</name>
+	<groupId>org.sakaiproject</groupId>
+	<artifactId>sakai-memory-common-deployer</artifactId>
+	<organization>
+		<name>University of Cambridge</name>
+		<url>http://caret.cam.ac.uk/</url>
+	</organization>
+	<inceptionYear>2007</inceptionYear>
+	<packaging>pom</packaging>
+	<properties>
+		<deploy.target>common</deploy.target>
+	</properties>
+
+	<!-- these jars will be placed in common/lib -->
+	<dependencies>
+
+		<dependency>
+			<groupId>${sakai.ehcache.groupId}</groupId>
+			<artifactId>${sakai.ehcache.artifactId}</artifactId>
+			<version>${sakai.ehcache.version}</version>
+			<scope>compile</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>backport-util-concurrent</groupId>
+			<artifactId>backport-util-concurrent</artifactId>
+			<version>3.0</version>
+			<scope>compile</scope>
+		</dependency>
+
+	</dependencies>
+
+</project>
