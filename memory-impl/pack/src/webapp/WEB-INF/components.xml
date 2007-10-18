@@ -3,34 +3,72 @@
 
 <beans>
 
-	<bean id="org.sakaiproject.memory.api.MemoryService"
-			class="org.sakaiproject.memory.impl.BasicMemoryService"
-			init-method="init" destroy-method="destroy">
-		<property name="cacheManager" ref="org.sakaiproject.memory.api.MemoryService.cacheManager" />
-		<property name="securityService" ref="org.sakaiproject.authz.api.SecurityService" />
-		<property name="sessionManager" ref="org.sakaiproject.tool.api.SessionManager" />
-	<!-- TODO - remove this injection -AZ -->
-		<property name="eventTrackingService" ref="org.sakaiproject.event.api.EventTrackingService" />
-	</bean>
+   <!-- This bean is the heart and soul of this project and the only access point 
+        that should be used from outside it -->
+   <bean id="org.sakaiproject.memory.api.MemoryService"
+      class="org.sakaiproject.memory.impl.BasicMemoryService" 
+      init-method="init"
+      destroy-method="destroy">
+      <property name="cacheManager" ref="org.sakaiproject.memory.api.MemoryService.cacheManager" />
+      <property name="securityService" ref="org.sakaiproject.authz.api.SecurityService.LAZY" />
+      <property name="sessionManager" ref="org.sakaiproject.tool.api.SessionManager.LAZY" />
+      <!-- TODO - remove this injection -AZ -->
+      <property name="eventTrackingService" ref="org.sakaiproject.event.api.EventTrackingService" />
+   </bean>
 
+   <!-- Fire this up lazy to break the circular dependency chain (both these depend on each other) -->
+   <bean id="org.sakaiproject.authz.api.SecurityService.LAZY"
+      class="org.springframework.aop.framework.ProxyFactoryBean">
+      <property name="targetSource">
+         <bean class="org.springframework.aop.target.LazyInitTargetSource">
+            <property name="targetBeanName">
+               <idref bean="org.sakaiproject.authz.api.SecurityService" />
+            </property>
+         </bean>
+      </property>
+   </bean>
 
-	<bean id="org.sakaiproject.memory.api.MemoryService.cacheManager" 
-			class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean">
-  		<property name="configLocation">
-    		<value>classpath:org/sakaiproject/memory/api/ehcache.xml</value>
-  		</property>
-	</bean>
+   <!-- Fire this up lazy just to make sure memory service starts up nice and early -->
+   <bean id="org.sakaiproject.tool.api.SessionManager.LAZY"
+      class="org.springframework.aop.framework.ProxyFactoryBean">
+      <property name="targetSource">
+         <bean class="org.springframework.aop.target.LazyInitTargetSource">
+            <property name="targetBeanName">
+               <idref bean="org.sakaiproject.tool.api.SessionManager" />
+            </property>
+         </bean>
+      </property>
+   </bean>
 
+   <!-- This is the main cache manager -->
+   <bean id="org.sakaiproject.memory.api.MemoryService.cacheManager"
+      class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean">
+      <property name="configLocation">
+         <value>classpath:org/sakaiproject/memory/api/ehcache.xml</value>
+      </property>
+   </bean>
 
-	<!-- deprecated bean (this is the extra cache used by the multirefcache which is no longer supported) -->
-	<bean id="org.sakaiproject.memory.MemoryService.mref_map" 
-  			class="org.springframework.cache.ehcache.EhCacheFactoryBean">
-  		<property name="cacheManager"><ref bean="org.sakaiproject.memory.api.MemoryService.cacheManager"/></property>
-    	<property name="cacheName"><value>org.sakaiproject.memory.MemoryService.mref_map</value></property>
-    	<property name="eternal" ><value>true</value></property>
-    	<property name="maxElementsInMemory" ><value>1</value></property>
-    	<property name="overflowToDisk"><value>true</value></property>
-    	<property name="diskPersistent" ><value>false</value></property>
-  	</bean>
+   <!-- deprecated bean (this is the extra cache used by the multirefcache which is no longer supported) -->
+   <bean id="org.sakaiproject.memory.MemoryService.mref_map"
+      class="org.springframework.cache.ehcache.EhCacheFactoryBean">
+      <property name="cacheManager">
+         <ref bean="org.sakaiproject.memory.api.MemoryService.cacheManager" />
+      </property>
+      <property name="cacheName">
+         <value>org.sakaiproject.memory.MemoryService.mref_map</value>
+      </property>
+      <property name="eternal">
+         <value>true</value>
+      </property>
+      <property name="maxElementsInMemory">
+         <value>1</value>
+      </property>
+      <property name="overflowToDisk">
+         <value>true</value>
+      </property>
+      <property name="diskPersistent">
+         <value>false</value>
+      </property>
+   </bean>
 
 </beans>
