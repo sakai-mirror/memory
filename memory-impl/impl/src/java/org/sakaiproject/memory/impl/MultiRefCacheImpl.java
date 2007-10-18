@@ -36,6 +36,7 @@ import org.apache.commons.logging.LogFactory;
 import org.sakaiproject.authz.cover.AuthzGroupService;
 import org.sakaiproject.event.api.Event;
 import org.sakaiproject.event.api.EventTrackingService;
+import org.sakaiproject.memory.api.Cache;
 import org.sakaiproject.memory.api.MultiRefCache;
 
 /**
@@ -47,7 +48,7 @@ import org.sakaiproject.memory.api.MultiRefCache;
  * Manipulation of this map is synchronized. This map is not used for cache access, just when items are added and removed.<br />
  * The cache map itself becomes synchronized when it's manipulated (not when reads occur), so this added sync. for the refs fits the existing pattern.
  * </p>
- * @deprecated no longer supported, invalidate the entries in your own code instead
+ * @deprecated no longer supported, invalidate the entries by associating with the 3 arg put method in the {@link Cache}
  */
 public class MultiRefCacheImpl extends MemCache implements MultiRefCache,
 		CacheEventListener 
@@ -128,7 +129,7 @@ public class MultiRefCacheImpl extends MemCache implements MultiRefCache,
 	/**
 	 * @inheritDoc
 	 */
-	public void put(Object key, Object payload, int duration, String ref, Collection azgIds)
+	public void put(String key, Object payload, int duration, String ref, Collection azgIds)
 	{
 		if(M_log.isDebugEnabled())
 		{
@@ -171,7 +172,7 @@ public class MultiRefCacheImpl extends MemCache implements MultiRefCache,
 	/**
 	 * @inheritDoc
 	 */
-	public void put(Object key, Object payload, int duration)
+	public void put(String key, Object payload, int duration)
 	{
 		put(key, payload, duration, null, null);
 	}
@@ -179,7 +180,7 @@ public class MultiRefCacheImpl extends MemCache implements MultiRefCache,
 	/**
 	 * @inheritDoc
 	 */
-	public void put(Object key, Object payload)
+	public void put(String key, Object payload)
 	{
 		put(key, payload, 0, null, null);
 	}
@@ -326,7 +327,7 @@ public class MultiRefCacheImpl extends MemCache implements MultiRefCache,
 				// invalidate all these keys
 				for (Iterator iKeys = cachedKeys.iterator(); iKeys.hasNext();)
 				{
-					remove(iKeys.next()); // evict primary authz cache
+					remove((String)iKeys.next()); // evict primary authz cache
 				}
 			}
 		}
@@ -355,7 +356,7 @@ public class MultiRefCacheImpl extends MemCache implements MultiRefCache,
 	 * @see org.sakaiproject.memory.impl.MemCache#get(java.lang.Object)
 	 */
 	@Override
-	public Object get(Object key) {
+	public Object get(String key) {
 		MultiRefCacheEntry mrce = (MultiRefCacheEntry) super.get(key);
 		return (mrce != null ? mrce.getPayload(key) : null);
 	}

@@ -45,5 +45,5 @@ public interface MultiRefCache extends Cache
 	 *        AuthzGroup ids that, if the changed, will invalidate this entry.
 	 * @deprecated no longer supported, invalidate the entries in your own code instead
 	 */
-	void put(Object key, Object payload, int duration, String ref, Collection azgIds);
+	void put(String key, Object payload, int duration, String ref, Collection azgIds);
 }

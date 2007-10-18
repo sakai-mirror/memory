@@ -23,5 +23,6 @@
     <module>memory-impl/impl</module>
     <module>memory-impl/pack</module>
     <module>memory-tool/tool</module>
+    <module>memory-common-deployer</module>
   </modules>
 </project>

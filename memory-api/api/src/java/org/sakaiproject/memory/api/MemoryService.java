@@ -53,21 +53,12 @@ public interface MemoryService {
 
    /**
     * Construct a Cache with the given name (often this is the fully qualified classpath of the api 
-    * for the service that is being cached or the class if there is no api).
+    * for the service that is being cached or the class if there is no api),
+    * this will operate on system defaults and will be a distributed cache without replication
     * @param cacheName Load a defined bean from the application context with this name or create a default cache with this name
     * @return a cache which can be used to store objects
     */
    Cache newCache(String cacheName);
-
-   /**
-    * Construct a Cache with the given name (often this is the fully qualified classpath of the api 
-    * for the service that is being cached or the class if there is no api).
-    * Automatic refresh handling if refresher is not null.
-    * @param cacheName Load a defined bean from the application context with this name or create a default cache with this name
-    * @param refresher The object that will handle refreshing of entries which are not found
-    * @return a cache which can be used to store objects
-    */
-   Cache newCache(String cacheName, CacheRefresher refresher);
 
    /**
     * Construct a Cache with the given name (often this is the fully qualified classpath of the api 
@@ -77,9 +68,12 @@ public interface MemoryService {
     * @param cacheName Load a defined bean from the application context with this name or create a default cache with this name
     * @param refresher The object that will handle refreshing of entries which are not found
     * @param notifer The object that will handle notifications which are a result of cache changes
+    * @param distributed if true this cache will be distributed across the cluster, otherwise it is local to the current server only
+    * @param replicated if true this cache will replicate cached objects across the cluster nodes, 
+    * otherwise the cache will just expire entries in the other caches and they will have to reload on that cluster node
     * @return a cache which can be used to store objects
     */
-   Cache newCache(String cacheName, CacheRefresher refresher, DerivedCache notifer);
+   Cache newCache(String cacheName, CacheRefresher refresher, DerivedCache notifer, boolean distributed, boolean replicated);
 
 
    // TODO - DEPRECATED METHODS BELOW - remove in next release (07/Oct/2007)

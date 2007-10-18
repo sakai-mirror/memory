@@ -46,7 +46,7 @@ public interface DerivedCache {
 	 * @param key the key for the object being placed in the cache
 	 * @param payload the object being placed in the cache
 	 */
-	void notifyCachePut(Object key, Object payload);
+	void notifyCachePut(String key, Object payload);
 
 	/**
 	 * This method is called when all cache items are cleared from the associated cache
@@ -62,5 +62,5 @@ public interface DerivedCache {
     * @param key the key for the object being placed in the cache
     * @param payload the object being placed in the cache
 	 */
-	void notifyCacheRemove(Object key, Object payload);
+	void notifyCacheRemove(String key, Object payload);
 }

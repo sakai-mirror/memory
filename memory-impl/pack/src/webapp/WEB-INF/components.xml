@@ -6,7 +6,6 @@
 	<bean id="org.sakaiproject.memory.api.MemoryService"
 			class="org.sakaiproject.memory.impl.BasicMemoryService"
 			init-method="init" destroy-method="destroy">
- 		<property name="cacheLogging"><value>false</value></property>
 		<property name="cacheManager" ref="org.sakaiproject.memory.api.MemoryService.cacheManager" />
 		<property name="securityService" ref="org.sakaiproject.authz.api.SecurityService" />
 		<property name="sessionManager" ref="org.sakaiproject.tool.api.SessionManager" />
@@ -21,6 +20,7 @@
     		<value>classpath:org/sakaiproject/memory/api/ehcache.xml</value>
   		</property>
 	</bean>
+
 
 	<!-- deprecated bean (this is the extra cache used by the multirefcache which is no longer supported) -->
 	<bean id="org.sakaiproject.memory.MemoryService.mref_map" 

@@ -48,7 +48,7 @@ import org.sakaiproject.tool.api.SessionManager;
  * </p>
  * Major deprecation and refactoring by AZ
  */
-public abstract class BasicMemoryService implements MemoryService {
+public class BasicMemoryService implements MemoryService {
 
    /** name of mref cache bean */
    private static final String ORG_SAKAIPROJECT_MEMORY_MEMORY_SERVICE_MREF_MAP = "org.sakaiproject.memory.MemoryService.mref_map";
@@ -160,17 +160,19 @@ public abstract class BasicMemoryService implements MemoryService {
       return rv;
    }
 
+
    public Cache newCache(String cacheName) {
       return new MemCache(this, instantiateCache(cacheName, false), null, null);
    }
 
-   public Cache newCache(String cacheName, CacheRefresher refresher) {
-      return new MemCache(this, instantiateCache(cacheName, false), refresher, null);
-   }
-
-   public Cache newCache(String cacheName, CacheRefresher refresher, DerivedCache notifer) {
+   public Cache newCache(String cacheName, CacheRefresher refresher, DerivedCache notifer,
+         boolean distributed, boolean replicated) {
+      // TODO - handle the distributed and replicated settings
+      M_log.warn("boolean distributed, boolean replicated not being handled yet");
       return new MemCache(this, instantiateCache(cacheName, false), refresher, notifer);
    }
+
+
 
    public void resetCachers() throws MemoryPermissionException {
       // check that this is a "super" user with the security service

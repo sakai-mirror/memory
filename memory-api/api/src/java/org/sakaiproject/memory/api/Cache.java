@@ -24,6 +24,7 @@ package org.sakaiproject.memory.api;
 import java.util.List;
 
 /**
+ * This is an abstraction of the general concept of a cache in Sakai<br/>
  * A Cache holds objects with keys with a limited lifespan
  * 
  * Major deprecation of methods here -AZ
@@ -38,73 +39,76 @@ public interface Cache extends Cacher {
     * Cache an object which will be expired based on the sakai cache configuration
     * (cluster safe)
     * 
-    * @param key
-    *           The key with which to find the object.
-    * @param payload
-    *           The object to cache.
+    * @param key the unique key for a cached object
+    * @param payload the cache payload (thing to cache)
     */
-   void put(Object key, Object payload);
+   void put(String key, Object payload);
 
    /**
     * Get the non expired entry, or null if not there (or expired)
     * (partially cluster safe)
     * 
-    * @param key
-    *           The cache key.
-    * @return The payload, or null if the payload is null, the key is not found, or the entry has
-    *         expired (Note: use containsKey() to remove this ambiguity).
+    * @param key the unique key for a cached object
+    * @return The cached payload, or null if the payload is not found in the cache
     */
-   Object get(Object key);
+   Object get(String key);
 
    /**
     * Test if an entry exists in the cache for a key
     * (partially cluster safe)
     * 
-    * @param key
-    *           The cache key.
+    * @param key the unique key for a cached object
     * @return true if the key maps to a non-expired cache entry, false if not.
     */
-   boolean containsKey(Object key);
+   boolean containsKey(String key);
 
    /**
-    * Get all the keys for this cache (cluster safe)
-    * (partially cluster safe)
-    * 
-    * @return The List of key values (Object).
-    */
-   List<Object> getKeys();
-
-   /**
-    * Clear all entries.
+    * Clear all entries from the cache (this effectively resets the cache)
+    * (cluster safe)
     */
    void clear();
 
    /**
-    * Remove this entry from the cache.
+    * Remove this entry from the cache or do nothing if the entry is not in the cache
     * (cluster safe)
     * 
-    * @param key
-    *        The cache key.
+    * @param key the unique key for a cached object
     */
-   void remove(Object key);
+   void remove(String key);
 
    /**
-    * Clear all entries and shutdown the cache.
-    * Don't attempt to use the cache after this call.
-    * This does not really need to be called as the caches are shutdown and cleaned up automatically.
+    * Clear all entries and shutdown the cache<br/>
+    * Don't attempt to use the cache after this call<br/>
+    * This does not really need to be called as the caches are shutdown and cleaned up automatically on Sakai shutdown
     */
    void destroy();
 
    /**
-    * Attach this DerivedCache to the cache. The DerivedCache is then notified of the cache contents changing events.
-    * This is basically a listener method.
+    * Attach this DerivedCache (cache event listener) to the cache.<br/> 
+    * The DerivedCache is then notified of the cache contents changing events.
+    * This is basically a cache event listener association method.
+    * (not cluster safe)
+    * <b>NOTE</b>: special method to allow cache event notification
     * (used by SiteCacheImpl only)
     * 
-    * @param cache
-    *        The DerivedCache to attach.
+    * @param cache the object which implements {@link DerivedCache}
     */
-   void attachDerivedCache(DerivedCache cache);
+   void attachDerivedCache(DerivedCache cacheEventListener);
 
+   /**
+    * Cache an object which will be expired based on the sakai cache configuration and also
+    * will be expired if one of the associated keys is updated or removed
+    * (cluster safe)
+    * <b>NOTE</b>: special method to allow automatic expiration of associated cache items
+    * 
+    * @param key the unique key for a cached object
+    * @param payload the cache payload (thing to cache)
+    * @param associatedKeys an array of all the keys which are associated with this cache item
+    */
+   void put(String key, Object payload, String[] associatedKeys);
+
+
+   // TODO deprecated methods below
 
    /*
     * This does some kind of transactional thing but it requires the user to say...
@@ -203,7 +207,7 @@ public interface Cache extends Cacher {
     *           The cache key.
     * @deprecated 07/OCT/2007 no longer used, see {@link #remove(Object)}
     */
-   void expire(Object key);
+   void expire(String key);
 
    /**
     * Cache an object
@@ -217,7 +221,7 @@ public interface Cache extends Cacher {
     * @deprecated Since Sakai 2.5.0 (Sept 2007)
     * @see Cache#put(Object, Object)
     */
-   void put(Object key, Object payload, int duration);
+   void put(String key, Object payload, int duration);
 
    /**
 	 * Test for an entry in the cache - expired or not.
@@ -228,7 +232,7 @@ public interface Cache extends Cacher {
 	 * @deprecated Since Sakai 2.5.0
 	 * @see Cache#containsKey(Object)
 	 */
-	boolean containsKeyExpiredOrNot(Object key);
+	boolean containsKeyExpiredOrNot(String key);
 
 
 	/**
@@ -240,7 +244,16 @@ public interface Cache extends Cacher {
 	 * @deprecated Since Sakai 2.5.0
 	 * @see Cache#get(Object)
 	 */
-	Object getExpiredOrNot(Object key);
+	Object getExpiredOrNot(String key);
+
+   /**
+    * Get all the keys for this cache
+    * 
+    * @return The List of key values (Object).
+    * @deprecated This is inefficient and should not be supported, Since 07/Oct/2007
+    */
+   List<Object> getKeys();
+
 
 	/**
 	 * Get all the non-expired non-null entries.
