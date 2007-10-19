@@ -37,13 +37,13 @@ public interface MemoryService {
 	 * Report the amount of unused and available memory for the JVM
 	 * @return free memory in bytes
 	 */
-	long getAvailableMemory();
+   public long getAvailableMemory();
 
    /**
     * Get a status report of memory cache usage
     * @return A string representing the current status of all caches
     */
-   String getStatus();
+   public String getStatus();
 
 	/**
 	 * Cause less memory to be used by clearing all caches,
@@ -51,20 +51,22 @@ public interface MemoryService {
 	 * now only the caches are being cleared
 	 * @exception PermissionException if the current user does not have super user permissions
 	 */
-	void resetCachers() throws MemoryPermissionException;
+   public void resetCachers() throws MemoryPermissionException;
 
    /**
     * Construct a Cache with the given name (often this is the fully qualified classpath of the api 
-    * for the service that is being cached or the class if there is no api),
+    * for the service that is being cached or the class if there is no api) or retrieve the one
+    * that already exists with this name,
     * this will operate on system defaults and will be a distributed cache without replication
     * @param cacheName Load a defined bean from the application context with this name or create a default cache with this name
     * @return a cache which can be used to store objects
     */
-   Cache newCache(String cacheName);
+	public Cache newCache(String cacheName);
 
    /**
     * Construct a Cache with the given name (often this is the fully qualified classpath of the api 
-    * for the service that is being cached or the class if there is no api).
+    * for the service that is being cached or the class if there is no api) or retrieve the one
+    * that already exists with this name,
     * Automatic refresh handling if refresher is not null and notification of cache changes
     * if notifier is not null.
     * @param cacheName Load a defined bean from the application context with this name or create a default cache with this name
@@ -75,7 +77,13 @@ public interface MemoryService {
     * otherwise the cache will just expire entries in the other caches and they will have to reload on that cluster node
     * @return a cache which can be used to store objects
     */
-   Cache newCache(String cacheName, CacheRefresher refresher, DerivedCache notifer, boolean distributed, boolean replicated);
+   public Cache newCache(String cacheName, CacheRefresher refresher, DerivedCache notifer, boolean distributed, boolean replicated);
+
+   /**
+    * Flushes and destroys the cache with this name<br/>
+    * @param cacheName unique name for this cache
+    */
+   public void destroyCache(String cacheName);
 
 
    // TODO - DEPRECATED METHODS BELOW - remove in next release (07/Oct/2007)

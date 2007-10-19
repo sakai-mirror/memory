@@ -63,12 +63,6 @@ public interface Cache extends Cacher {
    boolean containsKey(String key);
 
    /**
-    * Clear all entries from the cache (this effectively resets the cache)
-    * (cluster safe)
-    */
-   void clear();
-
-   /**
     * Remove this entry from the cache or do nothing if the entry is not in the cache
     * (cluster safe)
     * 
@@ -77,11 +71,10 @@ public interface Cache extends Cacher {
    void remove(String key);
 
    /**
-    * Clear all entries and shutdown the cache<br/>
-    * Don't attempt to use the cache after this call<br/>
-    * This does not really need to be called as the caches are shutdown and cleaned up automatically on Sakai shutdown
+    * Clear all entries from the cache (this effectively resets the cache)
+    * (cluster safe)
     */
-   void destroy();
+   void clear();
 
    /**
     * Attach this DerivedCache (cache event listener) to the cache.<br/> 
@@ -95,20 +88,16 @@ public interface Cache extends Cacher {
     */
    void attachDerivedCache(DerivedCache cacheEventListener);
 
-   /**
-    * Cache an object which will be expired based on the sakai cache configuration and also
-    * will be expired if one of the associated keys is updated or removed
-    * (cluster safe)
-    * <b>NOTE</b>: special method to allow automatic expiration of associated cache items
-    * 
-    * @param key the unique key for a cached object
-    * @param payload the cache payload (thing to cache)
-    * @param associatedKeys an array of all the keys which are associated with this cache item
-    */
-   void put(String key, Object payload, String[] associatedKeys);
-
 
    // TODO deprecated methods below
+
+   /**
+    * Clear all entries and shutdown the cache<br/>
+    * Don't attempt to use the cache after this call<br/>
+    * This does not really need to be called as the caches are shutdown and cleaned up automatically on Sakai shutdown
+    * @deprecated 07/Oct/2007 destroy the cache using {@link MemoryService#destroyCache(String)} instead
+    */
+   void destroy();
 
    /*
     * This does some kind of transactional thing but it requires the user to say...
