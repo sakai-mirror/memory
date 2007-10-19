@@ -29,8 +29,8 @@ import org.sakaiproject.cheftool.VelocityPortlet;
 import org.sakaiproject.cheftool.VelocityPortletPaneledAction;
 import org.sakaiproject.cheftool.api.Menu;
 import org.sakaiproject.event.api.SessionState;
-import org.sakaiproject.memory.api.MemoryPermissionException;
 import org.sakaiproject.memory.cover.MemoryServiceLocator;
+import org.sakaiproject.memory.exception.MemoryPermissionException;
 import org.sakaiproject.util.ResourceLoader;
 
 /**
