@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
+
+<beans>
+
+   <!-- This is the main cache manager -->
+   <bean id="org.sakaiproject.memory.api.MemoryService.cacheManager"
+      class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean">
+      <property name="configLocation">
+         <value>classpath:ehcache.xml</value>
+      </property>
+   </bean>
+
+   <!-- deprecated bean (this is the extra cache used by the multirefcache which is no longer supported) -->
+   <bean id="org.sakaiproject.memory.MemoryService.mref_map"
+      class="org.springframework.cache.ehcache.EhCacheFactoryBean">
+      <property name="cacheManager">
+         <ref bean="org.sakaiproject.memory.api.MemoryService.cacheManager" />
+      </property>
+      <property name="cacheName">
+         <value>org.sakaiproject.memory.MemoryService.mref_map</value>
+      </property>
+      <property name="eternal">
+         <value>true</value>
+      </property>
+      <property name="maxElementsInMemory">
+         <value>1</value>
+      </property>
+      <property name="overflowToDisk">
+         <value>true</value>
+      </property>
+      <property name="diskPersistent">
+         <value>false</value>
+      </property>
+   </bean>
+
+</beans>

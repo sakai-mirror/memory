@@ -69,17 +69,78 @@
          <version>1.0.4</version>
       </dependency>
 
+      <!-- testing dependencies -->
+      <dependency>
+         <groupId>${sakai.spring.groupId}</groupId>
+         <artifactId>${sakai.spring.mock.artifactId}</artifactId>
+         <version>${sakai.spring.mock.version}</version>
+         <scope>provided</scope>
+      </dependency>
+
+      <dependency>
+         <groupId>cglib</groupId>
+         <artifactId>cglib-nodep</artifactId>
+         <version>2.1_3</version>
+         <scope>provided</scope>
+      </dependency>
+
+      <dependency>
+         <groupId>easymock</groupId>
+         <artifactId>easymock</artifactId>
+         <version>1.2_Java1.3</version>
+         <scope>provided</scope>
+      </dependency>
+
    </dependencies>
 
    <build>
       <resources>
          <resource>
+            <directory>${basedir}/src/bundle</directory>
+            <includes>
+               <include>**/*.properties</include>
+            </includes>
+            <filtering>false</filtering>
+         </resource>
+         <resource>
             <directory>${basedir}/src/java</directory>
             <includes>
                <include>**/*.xml</include>
             </includes>
+            <filtering>false</filtering>
          </resource>
       </resources>
+
+      <!-- unit testing -->
+      <plugins>
+         <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <!-- 
+               By default, the surefire plugin will automatically include all test classes with the following wildcard patterns:
+               "**/Test*.java" - includes all of its subdirectory and all java filenames that start with "Test".
+               "**/*Test.java" - includes all of its subdirectory and all java filenames that end with "Test".
+               "**/*TestCase.java" - includes all of its subdirectory and all java filenames that end with "TestCase".
+            -->
+         </plugin>
+      </plugins>
+      <testResources>
+         <testResource>
+            <directory>${basedir}/../pack/src/webapp/WEB-INF</directory>
+            <includes>
+               <include>ehcache-bean.xml</include>
+            </includes>
+         </testResource>
+         <testResource>
+            <directory>${basedir}/../api/src/java</directory>
+            <includes>
+               <include>ehcache.xml</include>
+            </includes>
+         </testResource>
+      </testResources>
    </build>
+
+</project>
+
 
 </project>
