@@ -50,10 +50,9 @@ import org.sakaiproject.memory.api.MultiRefCache;
  * </p>
  * @deprecated no longer supported, invalidate the entries by associating with the 3 arg put method in the {@link Cache}
  */
-public class MultiRefCacheImpl extends MemCache implements MultiRefCache,
-		CacheEventListener 
-	{
-	/** Our logger. */
+public class MultiRefCacheImpl extends MemCache implements MultiRefCache, CacheEventListener {
+
+   /** Our logger. */
 	private static Log M_log = LogFactory.getLog(MultiRefCacheImpl.class);
 
 	/** Map of reference string -> Collection of cache keys. */

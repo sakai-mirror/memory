@@ -19,13 +19,9 @@
  *
  **********************************************************************************/
 
-package org.sakaiproject.memory.impl;
+package org.sakaiproject.memory.impl.util;
 
 
-/**
- * @author ieb
- *
- */
 /**
  * @author ieb
  */

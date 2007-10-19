@@ -37,9 +37,9 @@ import org.sakaiproject.memory.api.Cache;
 import org.sakaiproject.memory.api.CacheRefresher;
 import org.sakaiproject.memory.api.Cacher;
 import org.sakaiproject.memory.api.DerivedCache;
-import org.sakaiproject.memory.api.MemoryPermissionException;
 import org.sakaiproject.memory.api.MemoryService;
 import org.sakaiproject.memory.api.MultiRefCache;
+import org.sakaiproject.memory.exception.MemoryPermissionException;
 import org.sakaiproject.tool.api.SessionManager;
 
 /**

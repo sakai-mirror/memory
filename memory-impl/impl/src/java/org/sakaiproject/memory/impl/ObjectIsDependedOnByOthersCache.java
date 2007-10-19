@@ -29,7 +29,8 @@ import net.sf.ehcache.Element;
 import net.sf.ehcache.distribution.ReplicationControl;
 
 import org.sakaiproject.memory.api.MultipleReferenceCache;
-import org.sakaiproject.memory.api.ObjectNotCachedException;
+import org.sakaiproject.memory.exception.ObjectNotCachedException;
+import org.sakaiproject.memory.impl.util.DependentPayload;
 
 /**
  * A cache, where the cached object is depended on by others
