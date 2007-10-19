@@ -9,8 +9,10 @@ import net.sf.ehcache.CacheManager;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-import org.easymock.MockControl;
+import org.sakaiproject.event.api.Event;
 import org.sakaiproject.memory.api.Cache;
+import org.sakaiproject.memory.api.CacheRefresher;
+import org.sakaiproject.memory.api.DerivedCache;
 import org.sakaiproject.memory.impl.BasicMemoryService;
 import org.springframework.test.AbstractSingleSpringContextTests;
 
@@ -146,34 +148,124 @@ public class BasicMemoryServiceTest extends AbstractSingleSpringContextTests {
       Cache cache1 = memoryService.newCache(CACHENAME1);
       assertNotNull(cache1);
       cache1.put("1.1", "thing");
-
-      getCachesStatus();
+      assertEquals(1, cache1.getSize());
 
       // check status after adding a cache
-//      status = memoryService.getStatus();
-//      assertNotNull(status);
-//      assertEquals(basicCachesCount + 1, cacheManager.getCacheNames().length);
+      getCachesStatus();
+
+      // make sure you can add a cache again (which is just fetching the cache)
+      Cache cacheOne = memoryService.newCache(CACHENAME1);
+      assertNotNull(cache1);
+      assertEquals(cache1, cacheOne);
+
+      // make sure creating a cache with no name fails
+      try {
+         memoryService.newCache("");
+         fail("should have thrown exception");
+      } catch (IllegalArgumentException e) {
+         assertNotNull(e.getMessage());
+      }
+   }
+
+
+   public void testDestroyCache() {
+      // try to destroy a cache
+      memoryService.destroyCache(CACHENAME1);
+
+      // try to destroy one that does not exist (should not fail)
+      memoryService.destroyCache(CACHENAME2);
+
+      // make sure bad argument causes failure
+      try {
+         memoryService.destroyCache("");
+         fail("should have thrown exception");
+      } catch (IllegalArgumentException e) {
+         assertNotNull(e.getMessage());
+      }      
    }
 
    /**
     * Test method for {@link org.sakaiproject.memory.impl.BasicMemoryService#newCache(java.lang.String, org.sakaiproject.memory.api.CacheRefresher, org.sakaiproject.memory.api.DerivedCache, boolean, boolean)}.
     */
    public void testNewCacheStringCacheRefresherDerivedCacheBooleanBoolean() {
-      fail("Not yet implemented");
-   }
 
-   /**
-    * Test method for {@link org.sakaiproject.memory.impl.BasicMemoryService#resetCachers()}.
-    */
-   public void testResetCachers() {
-      fail("Not yet implemented");
+      // test creating the cache with normal options
+      Cache cache1 = memoryService.newCache(CACHENAME1, null, null, true, false);
+      assertNotNull(cache1);
+      cache1.put("2.1", "thing");
+      cache1.put("2.2", "thing");
+
+      assertEquals(2, cache1.getSize());
+
+      // test adding in the listeners
+      CacheRefresher refresher = new CacheRefresher() {
+         public Object refresh(Object key, Object oldValue, Event event) {
+            if (key.equals("TESTKEY")) {
+               return "UPDATED";
+            }
+            return null;
+         }
+      };
+
+      // test creating a cache with a refresher and see if it works
+      Cache cache2 = memoryService.newCache(CACHENAME2, refresher, null, true, false);
+      assertNotNull(cache2);
+      assertEquals(0, cache2.getSize());
+      assertNull(cache2.get("INVALID"));
+      assertEquals("UPDATED", cache2.get("TESTKEY"));
+      assertEquals(1, cache2.getSize());
+
+      // test adding in the notifier
+      final String[] status = new String[1];
+      DerivedCache eventListener = new DerivedCache() {
+         public void notifyCacheClear() {
+            status[0] = "CLEAR";
+         }
+         public void notifyCachePut(String key, Object payload) {
+            status[0] = "PUT";
+         }
+         public void notifyCacheRemove(String key, Object payload) {
+            status[0] = "REMOVE";
+         }
+      };
+
+      Cache cache3 = memoryService.newCache(CACHENAME3, null, eventListener, true, false);
+      assertNotNull(cache3);
+      assertEquals(0, cache3.getSize());
+      assertNull(status[0]);
+      cache3.put("3.1", "blah");
+      assertEquals("PUT", status[0]);
+      cache3.remove("3.1");
+      assertEquals("REMOVE", status[0]);
+      cache3.clear();
+      assertEquals("CLEAR", status[0]);
+      assertEquals(0, cache3.getSize());
+
+      getCachesStatus();
+
+      // cleanups
+      memoryService.destroyCache(CACHENAME1);
+      memoryService.destroyCache(CACHENAME2);
+      memoryService.destroyCache(CACHENAME3);
+
+      // TODO check the booleans once they are actually functional
    }
 
    /**
     * Test method for {@link org.sakaiproject.memory.impl.BasicMemoryService#doReset()}.
     */
    public void testDoReset() {
-      fail("Not yet implemented");
+      // create a cache and put some stuff in it
+      Cache cache1 = memoryService.newCache(CACHENAME1);
+      assertNotNull(cache1);
+      cache1.put("1.1", "thing");
+      cache1.put("1.2", "thing");
+      assertEquals(2, cache1.getSize());
+
+      memoryService.doReset();
+
+      assertEquals(0, cache1.getSize());
+      memoryService.destroyCache(CACHENAME1);
    }
 
 }

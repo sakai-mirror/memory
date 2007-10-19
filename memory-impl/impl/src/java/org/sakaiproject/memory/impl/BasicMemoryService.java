@@ -24,7 +24,9 @@ package org.sakaiproject.memory.impl;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import net.sf.ehcache.Ehcache;
 
@@ -61,9 +63,10 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
       this.applicationContext = applicationContext;
    }
 
-   /** name of mref cache bean */
-   private static final String ORG_SAKAIPROJECT_MEMORY_MEMORY_SERVICE_MREF_MAP = "org.sakaiproject.memory.MemoryService.mref_map";
-
+   /**
+    * Stores the record of all the created caches
+    */
+   protected Map<String, Cache> cachesRecord = new ConcurrentHashMap<String, Cache>();
 
    /** Event for the memory reset. */
    protected static final String EVENT_RESET = "memory.reset";
@@ -120,7 +123,9 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
       // }
 
       cacheManager.clearAll();
+      cachesRecord.clear();
    }
+
 
    public long getAvailableMemory() {
       return Runtime.getRuntime().freeMemory();
@@ -171,14 +176,23 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
 
 
    public Cache newCache(String cacheName) {
-      return new MemCache(instantiateCache(cacheName, true), null, null);
+      return newCache(cacheName, null, null, true, false);
    }
 
    public Cache newCache(String cacheName, CacheRefresher refresher, DerivedCache notifer,
          boolean distributed, boolean replicated) {
       // TODO - handle the distributed and replicated settings
+      if (cacheName == null || "".equals(cacheName)) {
+         throw new IllegalArgumentException("cacheName cannot be null or empty string");
+      }
+
       M_log.warn("boolean distributed, boolean replicated not being handled yet");
-      return new MemCache(instantiateCache(cacheName, true), refresher, notifer);
+      Cache c = cachesRecord.get(cacheName);
+      if (c == null) {
+         c = new MemCache(instantiateCache(cacheName, true), refresher, notifer);
+      }
+      cachesRecord.put(cacheName, c);
+      return c;
    }
 
 
@@ -221,7 +235,7 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
    /**
     * Do a reset of all caches
     */
-   protected void doReset() {
+   public void doReset() {
       M_log.debug("doReset()");
 
       final List<Ehcache> allCaches = getAllCaches(false);
@@ -253,19 +267,7 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
 
       String name = cacheName;
       if (name == null || "".equals(name)) {
-         if (legacyMode) {
-            // make up a name
-            name = "DefaultCache" + UUID.randomUUID().toString();
-            if (cacheManager.cacheExists(name)) {
-               M_log.warn("Cache already exists and is bound to CacheManager; creating new cache from defaults: " + name);
-               // favor creation of new caches for backwards compatibility
-               // in the future, it seems like you would want to return the same
-               // cache if it already exists
-               name = name + UUID.randomUUID().toString();
-            }
-         } else {
-            throw new IllegalArgumentException("String cacheName must not be null or empty!");
-         }
+         throw new IllegalArgumentException("String cacheName must not be null or empty!");
       }
 
       // try to locate a named cache in the bean factory
@@ -275,6 +277,19 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
       } catch (BeansException e) {
          M_log.debug("Error occurred when trying to load cache from bean factory!", e);
          cache = null;
+      }
+
+      // try to locate the cache in the cacheManager by name
+      if (legacyMode) {
+         // make up a name
+         name = "DefaultCache" + UUID.randomUUID().toString();
+         if (cacheManager.cacheExists(name)) {
+            M_log.warn("Cache already exists and is bound to CacheManager; creating new cache from defaults: " + name);
+            // favor creation of new caches for backwards compatibility
+            // in the future, it seems like you would want to return the same
+            // cache if it already exists
+            name = name + UUID.randomUUID().toString();
+         }
       }
 
       if (cache != null) {
@@ -295,8 +310,23 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
       }
    }
 
+   public void destroyCache(String cacheName) {
+      if (cacheName == null || "".equals(cacheName)) {
+         throw new IllegalArgumentException("cacheName cannot be null or empty string");
+      }
+
+      cacheManager.removeCache(cacheName);
+      cachesRecord.remove(cacheName);
+   }
+
+
+
 
    // DEPRECATED METHODS BELOW -AZ
+
+   /** name of mref cache bean 
+    * @deprecated */
+   private static final String ORG_SAKAIPROJECT_MEMORY_MEMORY_SERVICE_MREF_MAP = "org.sakaiproject.memory.MemoryService.mref_map";
 
    /**
     * {@inheritDoc}

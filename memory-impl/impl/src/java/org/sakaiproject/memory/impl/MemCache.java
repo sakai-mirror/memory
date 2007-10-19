@@ -34,7 +34,6 @@ import net.sf.ehcache.Element;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.sakaiproject.component.cover.ComponentManager;
 import org.sakaiproject.event.api.Event;
 import org.sakaiproject.event.api.EventTrackingService;
 import org.sakaiproject.memory.api.Cache;
@@ -64,7 +63,6 @@ public class MemCache implements Cache, Observer
    /** This is the notifier for this cache (if one is set) */
    protected DerivedCache m_derivedCache = null;
 
-
    /**
     * Create a MemCache object which gives us access to the cache and applies the
     * refresher (if one is supplied), <br/>
@@ -84,42 +82,14 @@ public class MemCache implements Cache, Observer
       this.cache = cache;
    }
 
-
-   public void attachDerivedCache(DerivedCache cache) {
-      // Note: only one is supported
-      if (cache == null) {
-         m_derivedCache = null;
-      } else {
-         // TODO shouldn't we allow someone to attach a new listener? -AZ
-         if (m_derivedCache != null) {
-            log.warn("attachDerivedCache - already got one and will not override (not sure why we won't though)");
-         } else {
-            m_derivedCache = cache;
-         }
-      }
-   }
-
-
    public void put(String key, Object payload) {
-      put(key, payload, null);
-   }
-
-   public void put(String key, Object payload, String[] associatedKeys) {
       if (log.isDebugEnabled()) {
-         log.debug("put(String " + key + ", Object " + payload + ", assocKeys " + associatedKeys + ")");
+         log.debug("put(String " + key + ", Object " + payload + ")");
       }
 
       cache.put(new Element(key, payload));
-      
-      // TODO handle the associated keys
-      if (associatedKeys != null) {
-         if (log.isDebugEnabled()) {
-            log.debug("associating "+associatedKeys.length+" keys with this key: " + key);
-         }
-         throw new UnsupportedOperationException("not supported yet, functionality is not in place");
-      }
 
-      if (m_derivedCache != null) m_derivedCache.notifyCachePut(key, payload);
+      if (m_derivedCache != null) m_derivedCache.notifyCachePut(key, payload); // TODO - handle this with ehcache notifiers
    }
 
 
@@ -138,12 +108,20 @@ public class MemCache implements Cache, Observer
       }
 
       final Element e = cache.get(key);
-      Object rv = null;
-      if (e != null) {
-         rv = e.getObjectValue();
+      Object payload = null;
+      if (e == null) {
+         if (m_refresher != null) {
+            // TODO - handle this with a blocking cache before merging -AZ
+            payload = m_refresher.refresh(key, null, null);
+            if (payload != null) {
+               put(key, payload);
+            }
+         }
+      } else {
+         payload = e.getObjectValue();
       }
 
-      return rv;
+      return payload;
 
    } // get
 
@@ -156,7 +134,7 @@ public class MemCache implements Cache, Observer
       final Object value = get(key);
       cache.remove(key);
 
-      if (m_derivedCache != null) m_derivedCache.notifyCacheRemove(key, value);
+      if (m_derivedCache != null) m_derivedCache.notifyCacheRemove(key, value); // TODO - handle this with ehcache notifiers
    } // remove
 
 
@@ -166,16 +144,26 @@ public class MemCache implements Cache, Observer
       cache.removeAll();  //TODO Do we boolean doNotNotifyCacheReplicators? Ian? -I think we do want to notify the replicators unless we are trying to support clearing the cache on one server only (the repicator will refill this cache though) -AZ
       cache.clearStatistics();
 
-      if (m_derivedCache != null) m_derivedCache.notifyCacheClear();
+      if (m_derivedCache != null) m_derivedCache.notifyCacheClear(); // TODO - handle this with ehcache notifiers
 
    } // clear
 
-   public void destroy() {
-      clear();
-      cache.getCacheManager().removeCache(cache.getName());
+
+   public void attachDerivedCache(DerivedCache cache) {
+      // Note: only one is supported
+      if (cache == null) {
+         m_derivedCache = null;
+      } else {
+         // TODO shouldn't we allow someone to attach a new listener? -AZ
+         if (m_derivedCache != null) {
+            log.warn("attachDerivedCache - already got one and will not override (not sure why we won't though)");
+         } else {
+            m_derivedCache = cache;
+         }
+      }
    }
 
-   
+
    /**********************************************************************************************************************************************************************************************************************************************************
     * Cacher implementation
     *********************************************************************************************************************************************************************************************************************************************************/
@@ -219,6 +207,9 @@ public class MemCache implements Cache, Observer
     */
    // TODO remove deprecated methods
 
+   public void destroy() {
+      clear();
+   }
 
    /** The string that all resources in this cache will start with. 
     * @deprecated */
@@ -253,7 +244,6 @@ public class MemCache implements Cache, Observer
          EventTrackingService eventTrackingService, Ehcache cache)
    {
       // inject our dependencies
-// This was not actually needed and required a very odd constructor of sending the memory service along -AZ
 //      m_memoryService = memoryService;
       m_eventTrackingService = eventTrackingService;
       this.cache = cache;

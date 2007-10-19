@@ -142,7 +142,7 @@
          <testResource>
             <directory>${basedir}/../pack/src/webapp/WEB-INF</directory>
             <includes>
-               <include>ehcache-bean.xml</include>
+               <include>ehcache-beans.xml</include>
             </includes>
          </testResource>
          <testResource>
@@ -153,8 +153,5 @@
          </testResource>
       </testResources>
    </build>
-
-</project>
-
 
 </project>
