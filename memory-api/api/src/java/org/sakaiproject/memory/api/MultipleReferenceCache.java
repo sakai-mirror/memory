@@ -51,7 +51,7 @@ public interface MultipleReferenceCache
 	 * @param dependentKeys keys for related objects, either this object is dependant on these, or these are dependant on this object
 	 * @param payload the payload of save
 	 */
-	void put(Object key, Object[] dependentKeys, Object payload);
+	void put(String key, String[] dependentKeys, Object payload);
 	
 	/**
 	 * Get the keyed object, if not present an ObjectNotCachedException will be thrown
@@ -59,18 +59,18 @@ public interface MultipleReferenceCache
 	 * @return
 	 * @throws ObjectNotCachedException
 	 */
-	Object get(Object key) throws ObjectNotCachedException;
+	Object get(String key) throws ObjectNotCachedException;
 	
 	/**
 	 * Remove the object
 	 * @param key
 	 */
-	void remove(Object key) throws ObjectNotCachedException;
+	void remove(String key) throws ObjectNotCachedException;
 	
 	/**
 	 * Retruns true if the object exists in the cache
 	 * @param key the key for the object
 	 */
-	boolean exists(Object key);
+	boolean exists(String key);
 
 }
