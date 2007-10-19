@@ -25,14 +25,13 @@ package org.sakaiproject.memory.impl.util;
 /**
  * @author ieb
  */
-public class DependentPayload
-{
+public class DependentPayload {
 
 	/**
 	 * @param payload
 	 * @param dependentKeys
 	 */
-	public DependentPayload(Object payload, Object[] dependentKeys)
+	public DependentPayload(Object payload, String[] dependentKeys)
 	{
 		this.payLoadObject = payload;
 		this.dependsOnThis = dependentKeys;
@@ -40,11 +39,10 @@ public class DependentPayload
 
 	public Object payLoadObject;
 
-	public Object[] dependsOnThis;
+	public String[] dependsOnThis;
 
 	/**
-	 * We have to check that the both the payload and dependencies havent
-	 * changed
+	 * We have to check that the both the payload and dependencies haven't changed
 	 * 
 	 * @see java.lang.Object#equals(java.lang.Object)
 	 */

@@ -40,6 +40,7 @@ import org.sakaiproject.event.api.EventTrackingService;
 import org.sakaiproject.memory.api.Cache;
 import org.sakaiproject.memory.api.CacheRefresher;
 import org.sakaiproject.memory.api.DerivedCache;
+import org.sakaiproject.memory.api.MemoryService;
 
 /**
  * An abstraction of the caching system for Sakai<br/>
@@ -57,93 +58,11 @@ public class MemCache implements Cache, Observer
    /** The object that will deal with missing entries. */
    protected CacheRefresher m_refresher = null;
 
-   /** The string that all resources in this cache will start with. */
-   protected String m_resourcePattern = null;
-
    /** If true, we are disabled. */
    protected boolean m_disabled = false;
 
-   /** If true, we have all the entries that there are in the cache. */
-   protected boolean m_complete = false;
-
-   /** Alternate isComplete, based on patterns. */
-   protected Set<String> m_partiallyComplete = new HashSet<String>();
-
-   /** If true, we are going to hold any events we see in the m_heldEvents list for later processing. */
-   protected boolean m_holdEventProcessing = false;
-
-   /** The events we are holding for later processing. */
-   protected List<Event> m_heldEvents = new Vector<Event>();
-
-   // these are just class variables
-   protected BasicMemoryService m_memoryService = null;
-   protected EventTrackingService m_eventTrackingService = null;
+   /** This is the notifier for this cache (if one is set) */
    protected DerivedCache m_derivedCache = null;
-
-   /**
-    * The cache entry. Holds a time stamped payload.
-    * @deprecated No longer used for main cache, will be removed -AZ
-    */
-   protected class CacheEntry extends SoftReference
-   {
-      /** Set if our payload is supposed to be null. */
-      protected boolean m_nullPayload = false;
-
-      /**
-       * Construct to cache the payload for the duration.
-       * 
-       * @param payload
-       *        The thing to cache.
-       * @param duration
-       *        The time (seconds) to keep this cached.
-       * @deprecated lance speelmon
-       */
-      public CacheEntry(Object payload, int duration)
-      {
-         // put the payload into the soft reference
-         super(payload);
-
-         // is it supposed to be null?
-         m_nullPayload = (payload == null);
-
-      } // CacheEntry
-
-      /**
-       * Get the cached object.
-       * 
-       * @param key
-       *        The key for this entry (if null, we won't try to refresh if missing)
-       * @return The cached object.
-       * @deprecated No longer used for main cache -AZ
-       */
-      public Object getPayload(String key)
-      {
-         // if we hold null, this is easy
-         if (m_nullPayload)
-         {
-            return null;
-         }
-
-         // get the payload
-         Object payload = this.get();
-
-         // if it has been garbage collected, and we can, refresh it
-         if (payload == null)
-         {
-            if ((m_refresher != null) && (key != null))
-            {
-               // ask the refresher for the value
-               payload = m_refresher.refresh(key, null, null);
-
-               // store this new value
-               put(key, payload);
-            }
-         }
-
-         return payload;
-      }
-
-   } // CacheEntry
 
 
    /**
@@ -151,40 +70,30 @@ public class MemCache implements Cache, Observer
     * refresher (if one is supplied), <br/>
     * Note that the recommended usage is to simply
     * get a cache from the EhCache service instead
-    * @param memoryService the Sakai memory service
     * @param cache an ehCache (already initialized)
     * @param refresher (optional) an object that implements {@link CacheRefresher} or null
     * @param notifier (optional) an object that implements {@link DerivedCache} or null
     */
-   public MemCache(BasicMemoryService memoryService, Ehcache cache, CacheRefresher refresher, DerivedCache notifier) {
+   public MemCache(Ehcache cache, CacheRefresher refresher, DerivedCache notifier) {
       // inject our dependencies
-      m_memoryService = memoryService;
+      if (cache == null) {
+         throw new NullPointerException("cache must be set");
+      }
       m_refresher = refresher;
       m_derivedCache = notifier;
       this.cache = cache;
-      m_eventTrackingService = null;
    }
 
 
-
-
-
-   public void attachDerivedCache(DerivedCache cache)
-   {
+   public void attachDerivedCache(DerivedCache cache) {
       // Note: only one is supported
-      if (cache == null)
-      {
+      if (cache == null) {
          m_derivedCache = null;
-      }
-      else
-      {
+      } else {
          // TODO shouldn't we allow someone to attach a new listener? -AZ
-         if (m_derivedCache != null)
-         {
-            log.warn("attachDerivedCache - already got one!");
-         }
-         else
-         {
+         if (m_derivedCache != null) {
+            log.warn("attachDerivedCache - already got one and will not override (not sure why we won't though)");
+         } else {
             m_derivedCache = cache;
          }
       }
@@ -254,24 +163,16 @@ public class MemCache implements Cache, Observer
    public void clear() {
       log.debug("clear()");
 
-      cache.removeAll();
+      cache.removeAll();  //TODO Do we boolean doNotNotifyCacheReplicators? Ian? -I think we do want to notify the replicators unless we are trying to support clearing the cache on one server only (the repicator will refill this cache though) -AZ
       cache.clearStatistics();
 
       if (m_derivedCache != null) m_derivedCache.notifyCacheClear();
 
    } // clear
 
-
    public void destroy() {
-      cache.removeAll();  //TODO Do we boolean doNotNotifyCacheReplicators? Ian? -I think we do want to notify the replicators unless we are trying to support clearing the cache on one server only (the repicator will refill this cache though) -AZ
-      cache.getStatistics().clearStatistics();
-
-      // if we are not in a global shutdown
-      if (!ComponentManager.hasBeenClosed())
-      {
-         // remove my event notification registration
-         m_eventTrackingService.deleteObserver(this);
-      }
+      clear();
+      cache.getCacheManager().removeCache(cache.getName());
    }
 
    
@@ -279,58 +180,28 @@ public class MemCache implements Cache, Observer
     * Cacher implementation
     *********************************************************************************************************************************************************************************************************************************************************/
 
-   /**
-    * Clear out as much as possible anything cached; re-sync any cache that is needed to be kept.
-    */
-   public void resetCache()
-   {
+   public void resetCache() {
       log.debug("resetCache()");
-
       clear();
-
    } // resetCache
 
-   /**
-    * Return the size of the cacher - indicating how much memory in use.
-    * 
-    * @return The size of the cacher.
-    */
-   public long getSize()
-   {
+   public long getSize() {
       log.debug("getSize()");
-
       return cache.getStatistics().getObjectCount();
    }
 
-   /**
-    * Return a description of the cacher.
-    * 
-    * @return The cacher's description.
-    */
-   public String getDescription()
-   {
+   public String getDescription() {
       final StringBuilder buf = new StringBuilder();
       buf.append("MemCache");
-      if (m_disabled)
-      {
+      if (m_disabled) {
          buf.append(" disabled");
       }
-      if (m_complete)
-      {
-         buf.append(" complete");
-      }
-      if (m_resourcePattern != null)
-      {
+
+      // TODO remove this part -AZ
+      if (m_resourcePattern != null) {
          buf.append(" " + m_resourcePattern);
       }
-      if (m_partiallyComplete.size() > 0)
-      {
-         buf.append(" partially_complete[");
-         for (Object element : m_partiallyComplete) {
-            buf.append(" " + element);
-         }
-         buf.append("]");
-      }
+
       final long hits = cache.getStatistics().getCacheHits();
       final long misses = cache.getStatistics().getCacheMisses();
       final long total = hits + misses;
@@ -348,6 +219,32 @@ public class MemCache implements Cache, Observer
     */
    // TODO remove deprecated methods
 
+
+   /** The string that all resources in this cache will start with. 
+    * @deprecated */
+   protected String m_resourcePattern = null;
+
+   /** If true, we have all the entries that there are in the cache. 
+    * @deprecated */
+   protected boolean m_complete = false;
+
+   /** Alternate isComplete, based on patterns. 
+    * @deprecated */
+   protected Set<String> m_partiallyComplete = new HashSet<String>();
+
+   /** If true, we are going to hold any events we see in the m_heldEvents list for later processing. 
+    * @deprecated */
+   protected boolean m_holdEventProcessing = false;
+
+   /** The events we are holding for later processing. 
+    * @deprecated */
+   protected List<Event> m_heldEvents = new Vector<Event>();
+
+   /**
+    * @deprecated
+    */
+   protected EventTrackingService m_eventTrackingService = null;
+
    /**
     * Construct the Cache. No automatic refresh handling.
     * @deprecated 07/Oct/2007 -AZ
@@ -356,7 +253,8 @@ public class MemCache implements Cache, Observer
          EventTrackingService eventTrackingService, Ehcache cache)
    {
       // inject our dependencies
-      m_memoryService = memoryService;
+// This was not actually needed and required a very odd constructor of sending the memory service along -AZ
+//      m_memoryService = memoryService;
       m_eventTrackingService = eventTrackingService;
       this.cache = cache;
    }
@@ -819,5 +717,71 @@ public class MemCache implements Cache, Observer
       return path;
 
    } // referencePath
+
+
+   /**
+    * The cache entry. Holds a time stamped payload.
+    * @deprecated No longer used for main cache, will be removed -AZ
+    */
+   protected class CacheEntry extends SoftReference
+   {
+      /** Set if our payload is supposed to be null. */
+      protected boolean m_nullPayload = false;
+
+      /**
+       * Construct to cache the payload for the duration.
+       * 
+       * @param payload
+       *        The thing to cache.
+       * @param duration
+       *        The time (seconds) to keep this cached.
+       * @deprecated lance speelmon
+       */
+      public CacheEntry(Object payload, int duration)
+      {
+         // put the payload into the soft reference
+         super(payload);
+
+         // is it supposed to be null?
+         m_nullPayload = (payload == null);
+
+      } // CacheEntry
+
+      /**
+       * Get the cached object.
+       * 
+       * @param key
+       *        The key for this entry (if null, we won't try to refresh if missing)
+       * @return The cached object.
+       * @deprecated No longer used for main cache -AZ
+       */
+      public Object getPayload(String key)
+      {
+         // if we hold null, this is easy
+         if (m_nullPayload)
+         {
+            return null;
+         }
+
+         // get the payload
+         Object payload = this.get();
+
+         // if it has been garbage collected, and we can, refresh it
+         if (payload == null)
+         {
+            if ((m_refresher != null) && (key != null))
+            {
+               // ask the refresher for the value
+               payload = m_refresher.refresh(key, null, null);
+
+               // store this new value
+               put(key, payload);
+            }
+         }
+
+         return payload;
+      }
+
+   } // CacheEntry
 
 }

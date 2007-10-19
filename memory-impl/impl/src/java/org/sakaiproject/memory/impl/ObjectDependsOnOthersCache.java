@@ -42,7 +42,7 @@ public class ObjectDependsOnOthersCache implements MultipleReferenceCache
 
 	private Cache cache;
 
-	private Map<Object, Map<Object, Object>> dependentKeyMap = new ConcurrentHashMap<Object, Map<Object, Object>>();
+	private Map<String, Map<String, String>> dependentKeyMap = new ConcurrentHashMap<String, Map<String, String>>();
 
 	/**
 	 * If true, invalidation will navigate the tree
@@ -67,7 +67,7 @@ public class ObjectDependsOnOthersCache implements MultipleReferenceCache
 	 * 
 	 * @see org.sakaiproject.memory.api.MultipleReferenceCache#exists(java.lang.Object)
 	 */
-	public boolean exists(Object key)
+	public boolean exists(String key)
 	{
 		return cache.isKeyInCache(key);
 	}
@@ -77,7 +77,7 @@ public class ObjectDependsOnOthersCache implements MultipleReferenceCache
 	 * 
 	 * @see org.sakaiproject.memory.api.MultipleReferenceCache#get(java.lang.Object)
 	 */
-	public Object get(Object key) throws ObjectNotCachedException
+	public Object get(String key) throws ObjectNotCachedException
 	{
 		Element e = cache.get(key);
 		if (e == null)
@@ -94,7 +94,7 @@ public class ObjectDependsOnOthersCache implements MultipleReferenceCache
 	 * @see org.sakaiproject.memory.api.MultipleReferenceCache#put(java.lang.Object,
 	 *      java.lang.Object[], java.lang.Object)
 	 */
-	public void put(Object key, Object[] dependentKeys, Object payload)
+	public void put(String key, String[] dependentKeys, Object payload)
 	{
 		try
 		{
@@ -105,13 +105,13 @@ public class ObjectDependsOnOthersCache implements MultipleReferenceCache
 		}
 		cache.put(new Element(key, new DependentPayload(payload, dependentKeys)));
 
-		// build the reverse index on the depenant keys
-		for (Object dkey : dependentKeys)
+		// build the reverse index on the dependent keys
+		for (String dkey : dependentKeys)
 		{
-			Map<Object, Object> dependsOnThis = dependentKeyMap.get(dkey);
+			Map<String, String> dependsOnThis = dependentKeyMap.get(dkey);
 			if (dependsOnThis == null)
 			{
-				dependsOnThis = new ConcurrentHashMap<Object, Object>();
+				dependsOnThis = new ConcurrentHashMap<String, String>();
 				dependentKeyMap.put(dkey, dependsOnThis);
 			}
 			if (!dependsOnThis.containsKey(key))
@@ -126,12 +126,12 @@ public class ObjectDependsOnOthersCache implements MultipleReferenceCache
 	 * 
 	 * @see org.sakaiproject.memory.api.MultipleReferenceCache#remove(java.lang.Object)
 	 */
-	public void remove(Object key) throws ObjectNotCachedException
+	public void remove(String key) throws ObjectNotCachedException
 	{
 		internalRemove(key, 0);
 	}
 
-	private void internalRemove(Object key, int level)
+	private void internalRemove(String key, int level)
 	{
 
 		cache.remove(key);
@@ -141,11 +141,11 @@ public class ObjectDependsOnOthersCache implements MultipleReferenceCache
 		}
 		try
 		{
-			Map<Object, Object> dependsOnThis = dependentKeyMap.remove(key);
+			Map<String, String> dependsOnThis = dependentKeyMap.remove(key);
 			if (dependsOnThis != null)
 			{
 				// remove everything that depends on this
-				for (Object dkey : dependsOnThis.keySet())
+				for (String dkey : dependsOnThis.keySet())
 				{
 					// if the tree is recursive, recurse down all branches.
 					if (recursive)

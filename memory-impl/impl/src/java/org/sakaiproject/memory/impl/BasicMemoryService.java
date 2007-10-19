@@ -31,7 +31,6 @@ import net.sf.ehcache.Ehcache;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.sakaiproject.authz.api.SecurityService;
-import org.sakaiproject.component.cover.ComponentManager;
 import org.sakaiproject.event.api.EventTrackingService;
 import org.sakaiproject.memory.api.Cache;
 import org.sakaiproject.memory.api.CacheRefresher;
@@ -41,6 +40,9 @@ import org.sakaiproject.memory.api.MemoryService;
 import org.sakaiproject.memory.api.MultiRefCache;
 import org.sakaiproject.memory.exception.MemoryPermissionException;
 import org.sakaiproject.tool.api.SessionManager;
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 
 /**
  * <p>
@@ -48,13 +50,20 @@ import org.sakaiproject.tool.api.SessionManager;
  * </p>
  * Major deprecation and refactoring by AZ
  */
-public class BasicMemoryService implements MemoryService {
+public class BasicMemoryService implements MemoryService, ApplicationContextAware {
+
+   /** Our logger. */
+   private static Log M_log = LogFactory.getLog(BasicMemoryService.class);
+
+   // using this instead of the ComponentManager so we can test -AZ
+   private ApplicationContext applicationContext;
+   public void setApplicationContext(ApplicationContext applicationContext) {
+      this.applicationContext = applicationContext;
+   }
 
    /** name of mref cache bean */
    private static final String ORG_SAKAIPROJECT_MEMORY_MEMORY_SERVICE_MREF_MAP = "org.sakaiproject.memory.MemoryService.mref_map";
 
-   /** Our logger. */
-   private static Log M_log = LogFactory.getLog(BasicMemoryService.class);
 
    /** Event for the memory reset. */
    protected static final String EVENT_RESET = "memory.reset";
@@ -162,14 +171,14 @@ public class BasicMemoryService implements MemoryService {
 
 
    public Cache newCache(String cacheName) {
-      return new MemCache(this, instantiateCache(cacheName, false), null, null);
+      return new MemCache(instantiateCache(cacheName, true), null, null);
    }
 
    public Cache newCache(String cacheName, CacheRefresher refresher, DerivedCache notifer,
          boolean distributed, boolean replicated) {
       // TODO - handle the distributed and replicated settings
       M_log.warn("boolean distributed, boolean replicated not being handled yet");
-      return new MemCache(this, instantiateCache(cacheName, false), refresher, notifer);
+      return new MemCache(instantiateCache(cacheName, true), refresher, notifer);
    }
 
 
@@ -259,15 +268,13 @@ public class BasicMemoryService implements MemoryService {
          }
       }
 
-      Ehcache cache = null;
-
       // try to locate a named cache in the bean factory
-      // TODO - do not use the component manager directly, use spring instead? -AZ
+      Ehcache cache = null;
       try {
-         cache = (Ehcache) ComponentManager.get(name);
-      } catch (Throwable e) {
+         cache = (Ehcache) applicationContext.getBean(name);
+      } catch (BeansException e) {
+         M_log.debug("Error occurred when trying to load cache from bean factory!", e);
          cache = null;
-         M_log.error("Error occurred when trying to load cache from bean factory!", e);
       }
 
       if (cache != null) {
@@ -279,9 +286,9 @@ public class BasicMemoryService implements MemoryService {
          if (legacyMode) {
             cacheManager.addCache(name); // create a new cache
             cache = cacheManager.getEhcache(name);
-            M_log.info("Loaded new created default Cache: " + cache);
+            M_log.info("Loaded newly created Cache (from default): " + cache);
          } else {
-            M_log.error("Could not find named cache in the bean factory!:" + name);
+            throw new IllegalStateException("Could not find named cache in the bean factory (and will not create one): " + name);
          }
 
          return cache;
@@ -316,7 +323,7 @@ public class BasicMemoryService implements MemoryService {
    /**
     * {@inheritDoc}
     * 
-    * @deprecated no longer supported
+    * @deprecated no longer supported (used by SecurityService impl which is SakaiSecurity)
     */
    public MultiRefCache newMultiRefCache(String cacheName) {
       M_log.warn("deprecated method, do NOT use");
@@ -409,7 +416,7 @@ public class BasicMemoryService implements MemoryService {
     */
    public Cache newCache() {
       M_log.warn("deprecated method, do NOT use");
-      return new MemCache(this, instantiateCache("MemCache", true), null, null);
+      return new MemCache(instantiateCache("MemCache", true), null, null);
    }
 
    /**

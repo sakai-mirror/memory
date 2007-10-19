@@ -21,9 +21,6 @@
 
 package org.sakaiproject.memory.impl;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 import net.sf.ehcache.Cache;
 import net.sf.ehcache.Element;
 import net.sf.ehcache.distribution.ReplicationControl;
@@ -38,13 +35,9 @@ import org.sakaiproject.memory.impl.util.DependentPayload;
  * 
  * @author ieb
  */
-public class ObjectIsDependedOnByOthersCache implements MultipleReferenceCache
-{
-
+public class ObjectIsDependedOnByOthersCache implements MultipleReferenceCache {
 
 	private Cache cache;
-
-	private Map<Object, Map<Object, Object>> dependentKeys = new ConcurrentHashMap<Object, Map<Object, Object>>();
 
 	/**
 	 * If true, invalidation will navigate the tree
@@ -69,7 +62,7 @@ public class ObjectIsDependedOnByOthersCache implements MultipleReferenceCache
 	 * 
 	 * @see org.sakaiproject.memory.api.MultipleReferenceCache#exists(java.lang.Object)
 	 */
-	public boolean exists(Object key)
+	public boolean exists(String key)
 	{
 		return cache.isKeyInCache(key);
 	}
@@ -79,7 +72,7 @@ public class ObjectIsDependedOnByOthersCache implements MultipleReferenceCache
 	 * 
 	 * @see org.sakaiproject.memory.api.MultipleReferenceCache#get(java.lang.Object)
 	 */
-	public Object get(Object key) throws ObjectNotCachedException
+	public Object get(String key) throws ObjectNotCachedException
 	{
 		Element e = cache.get(key);
 		if (e == null)
@@ -97,7 +90,7 @@ public class ObjectIsDependedOnByOthersCache implements MultipleReferenceCache
 	 * @see org.sakaiproject.memory.api.MultipleReferenceCache#put(java.lang.Object,
 	 *      java.lang.Object[], java.lang.Object)
 	 */
-	public void put(Object key, Object[] dependentKeys, Object payload)
+	public void put(String key, String[] dependentKeys, Object payload)
 	{
 		Element e = cache.get(key);
 		boolean replace = false;
@@ -142,12 +135,12 @@ public class ObjectIsDependedOnByOthersCache implements MultipleReferenceCache
 	 * 
 	 * @see org.sakaiproject.memory.api.MultipleReferenceCache#remove(java.lang.Object)
 	 */
-	public void remove(Object key) throws ObjectNotCachedException
+	public void remove(String key) throws ObjectNotCachedException
 	{
 		internalRemove(key, 0);
 	}
 
-	private void internalRemove(Object key, int level)
+	private void internalRemove(String key, int level)
 	{
 
 		Element e = cache.get(key);
@@ -162,7 +155,7 @@ public class ObjectIsDependedOnByOthersCache implements MultipleReferenceCache
 			if (p != null && p.dependsOnThis != null)
 			{
 				// remove everything that depends on this
-				for (Object dkey : p.dependsOnThis)
+				for (String dkey : p.dependsOnThis)
 				{
 					// if the tree is recursive, recurse down all branches.
 					if (recursive)

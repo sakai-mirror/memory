@@ -6,21 +6,32 @@ package org.sakaiproject.memory.impl.test;
 
 import net.sf.ehcache.CacheManager;
 
-import org.easymock.MockControl;
-import org.sakaiproject.memory.impl.BasicMemoryService;
-import org.springframework.test.AbstractTransactionalSpringContextTests;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
-import junit.framework.TestCase;
+import org.easymock.MockControl;
+import org.sakaiproject.memory.api.Cache;
+import org.sakaiproject.memory.impl.BasicMemoryService;
+import org.springframework.test.AbstractSingleSpringContextTests;
+
 
 /**
  * Testing the MemoryService
  * 
  * @author Aaron Zeckoski (aaron@caret.cam.ac.uk)
  */
-public class BasicMemoryServiceTest extends AbstractTransactionalSpringContextTests {
+public class BasicMemoryServiceTest extends AbstractSingleSpringContextTests {
+
+   private static Log log = LogFactory.getLog(BasicMemoryServiceTest.class);
 
    protected BasicMemoryService memoryService = null;
    protected CacheManager cacheManager = null;
+   protected int basicCachesCount = 0;
+
+   final String CACHENAME1 = "cache 1";
+   final String CACHENAME2 = "cache 2";
+   final String CACHENAME3 = "cache 3";
+
 
 //   private EntityManager entityManager;
 //   private MockControl entityManagerControl;
@@ -31,15 +42,18 @@ public class BasicMemoryServiceTest extends AbstractTransactionalSpringContextTe
       // they also need to be referenced in the project.xml file
       return new String[] { "ehcache-beans.xml" };
    }
-
-   // run this before each test starts
-   protected void onSetUpBeforeTransaction() throws Exception {
+   
+   @Override
+   protected void onSetUp() throws Exception {
       // load the spring created dao class bean from the Spring Application Context
       cacheManager = (CacheManager) applicationContext
             .getBean("org.sakaiproject.memory.api.MemoryService.cacheManager");
       if (cacheManager == null) {
          throw new NullPointerException("CacheManager could not be retrieved from spring context");
       }
+      basicCachesCount = cacheManager.getCacheNames().length;
+
+      //getCachesStatus();
 
       // load up any other needed spring beans
 
@@ -52,13 +66,21 @@ public class BasicMemoryServiceTest extends AbstractTransactionalSpringContextTe
       // create and setup the object to be tested
       memoryService = new BasicMemoryService();
       memoryService.setCacheManager(cacheManager);
-
+      memoryService.setApplicationContext(applicationContext);
    }
 
-   // run this before each test starts and as part of the transaction
-   protected void onSetUpInTransaction() {
-      // preload additional data if desired
-   }
+   /**
+    * 
+    */
+   private void getCachesStatus() {
+      String[] caches = cacheManager.getCacheNames();
+      StringBuilder sb = new StringBuilder();
+      sb.append("Loaded up the cache manager with "+basicCachesCount+" caches:\n");
+      for (int i = 0; i < caches.length; i++) {
+         sb.append("Cache " + i + ": " + caches[i] + ", size:" + cacheManager.getCache(caches[i]).getSize() + "\n");
+      }
+      log.info(sb.toString());
+   };
 
    /**
     * ADD unit tests below here, use testMethod as the name of the unit test, Note that if a method
@@ -72,7 +94,7 @@ public class BasicMemoryServiceTest extends AbstractTransactionalSpringContextTe
     * Test method for {@link org.sakaiproject.memory.impl.BasicMemoryService#init()}.
     */
    public void testInit() {
-      // this should be fine
+      // just make sure this does not cause an exception
       memoryService.init();
 
       memoryService.setCacheManager(null);
@@ -90,28 +112,47 @@ public class BasicMemoryServiceTest extends AbstractTransactionalSpringContextTe
     * Test method for {@link org.sakaiproject.memory.impl.BasicMemoryService#destroy()}.
     */
    public void testDestroy() {
-      fail("Not yet implemented");
+      // just make sure this does not cause an exception
+      memoryService.destroy();
    }
 
    /**
     * Test method for {@link org.sakaiproject.memory.impl.BasicMemoryService#getAvailableMemory()}.
     */
    public void testGetAvailableMemory() {
-      fail("Not yet implemented");
+      // just make sure this does not cause an exception
+      long mem = memoryService.getAvailableMemory();
+      assertTrue(mem > 0);
    }
 
    /**
     * Test method for {@link org.sakaiproject.memory.impl.BasicMemoryService#getStatus()}.
     */
    public void testGetStatus() {
-      fail("Not yet implemented");
+      String status = null;
+
+      // check basic status with no caches
+      status = memoryService.getStatus();
+      assertNotNull(status);
+      assertEquals(basicCachesCount, cacheManager.getCacheNames().length);
    }
 
    /**
     * Test method for {@link org.sakaiproject.memory.impl.BasicMemoryService#newCache(java.lang.String)}.
     */
    public void testNewCacheString() {
-      fail("Not yet implemented");
+
+      // add a new cache
+      Cache cache1 = memoryService.newCache(CACHENAME1);
+      assertNotNull(cache1);
+      cache1.put("1.1", "thing");
+
+      getCachesStatus();
+
+      // check status after adding a cache
+//      status = memoryService.getStatus();
+//      assertNotNull(status);
+//      assertEquals(basicCachesCount + 1, cacheManager.getCacheNames().length);
    }
 
    /**
