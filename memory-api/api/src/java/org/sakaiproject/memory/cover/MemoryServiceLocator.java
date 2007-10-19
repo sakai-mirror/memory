@@ -30,6 +30,7 @@ import org.sakaiproject.component.cover.ComponentManager;
  * 
  * @author University of Michigan, Sakai Software Development Team
  * @version $Revision$
+ * @deprecated 07/Oct/2007 Cover usage is discouraged, please inject this service using Spring
  */
 public class MemoryServiceLocator
 {

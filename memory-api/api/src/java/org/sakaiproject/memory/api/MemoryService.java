@@ -21,6 +21,8 @@
 
 package org.sakaiproject.memory.api;
 
+import org.sakaiproject.memory.exception.MemoryPermissionException;
+
 /**
  * MemoryService is the primary interface for the Sakai Memory service<br/>
  * This provides programmatic access to centralized caching in Sakai and methods for tracking memory use

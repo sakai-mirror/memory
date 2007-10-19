@@ -21,6 +21,8 @@
 
 package org.sakaiproject.memory.api;
 
+import org.sakaiproject.memory.exception.ObjectNotCachedException;
+
 /**
  * <pre>
  * This is a simplified multiple reference cache.
