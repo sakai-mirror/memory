@@ -25,12 +25,12 @@ import java.lang.ref.SoftReference;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Observable;
-import java.util.Observer;
 import java.util.Set;
 import java.util.Vector;
 
 import net.sf.ehcache.Ehcache;
 import net.sf.ehcache.Element;
+import net.sf.ehcache.Status;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -39,14 +39,13 @@ import org.sakaiproject.event.api.EventTrackingService;
 import org.sakaiproject.memory.api.Cache;
 import org.sakaiproject.memory.api.CacheRefresher;
 import org.sakaiproject.memory.api.DerivedCache;
-import org.sakaiproject.memory.api.MemoryService;
 
 /**
  * An abstraction of the caching system for Sakai<br/>
  * This allows the developer to access a cache created for their use,
  * create this cache using the {@link MemoryService}
  */
-public class MemCache implements Cache, Observer
+public class MemCache implements Cache
 {
    /** Our logger. */
    private static Log log = LogFactory.getLog(MemCache.class);
@@ -65,9 +64,8 @@ public class MemCache implements Cache, Observer
 
    /**
     * Create a MemCache object which gives us access to the cache and applies the
-    * refresher (if one is supplied), <br/>
-    * Note that the recommended usage is to simply
-    * get a cache from the EhCache service instead
+    * refresher (if one is supplied)<br/>
+    * We do not recommend creating this manually, you should instead use {@link MemoryService#newCache(String)}
     * @param cache an ehCache (already initialized)
     * @param refresher (optional) an object that implements {@link CacheRefresher} or null
     * @param notifier (optional) an object that implements {@link DerivedCache} or null
@@ -76,6 +74,10 @@ public class MemCache implements Cache, Observer
       // inject our dependencies
       if (cache == null) {
          throw new NullPointerException("cache must be set");
+      } else {
+         if (cache.getStatus() != Status.STATUS_ALIVE) {
+            throw new IllegalArgumentException("Cache must already be initialized and alive");
+         }
       }
       m_refresher = refresher;
       m_derivedCache = notifier;
@@ -207,6 +209,7 @@ public class MemCache implements Cache, Observer
     */
    // TODO remove deprecated methods
 
+   /** @deprecated */
    public void destroy() {
       clear();
    }
@@ -271,10 +274,10 @@ public class MemCache implements Cache, Observer
       }
 
       // register to get events - first, before others
-      if (pattern != null)
-      {
-         m_eventTrackingService.addPriorityObserver(this);
-      }
+//      if (pattern != null)
+//      {
+//         m_eventTrackingService.addPriorityObserver(this);
+//      }
    }
 
    /**
@@ -352,10 +355,10 @@ public class MemCache implements Cache, Observer
       m_resourcePattern = pattern;
 
       // register to get events - first, before others
-      if (pattern != null)
-      {
-         m_eventTrackingService.addPriorityObserver(this);
-      }
+//      if (pattern != null)
+//      {
+//         m_eventTrackingService.addPriorityObserver(this);
+//      }
    }
 
    
