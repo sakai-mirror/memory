@@ -250,7 +250,7 @@ public interface Cache extends Cacher {
 	 * @return all the non-expired non-null entries, or an empty list if none.
 	 * @deprecated Since Sakai 2.5.0
 	 */
-	List getAll();
+	List<Object> getAll();
 
 	/**
 	 * Get all the non-expired non-null entries that are in the specified reference path. Note: only works with String keys.
@@ -260,7 +260,7 @@ public interface Cache extends Cacher {
 	 * @return all the non-expired non-null entries, or an empty list if none.
 	 * @deprecated Since Sakai 2.5.0
 	 */
-	List getAll(String path);
+	List<Object> getAll(String path);
 
 	/**
 	 * Get all the keys, modified from resource references to ids by removing the resource prefix. Note: only works with String keys.
@@ -268,6 +268,6 @@ public interface Cache extends Cacher {
 	 * @return The List of keys converted from references to ids (String).
 	 * @deprecated Since Sakai 2.5.0
 	 */
-	List getIds();
+	List<Object> getIds();
 
 }
