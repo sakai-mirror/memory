@@ -25,7 +25,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import net.sf.ehcache.Ehcache;
@@ -280,16 +279,10 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
       }
 
       // try to locate the cache in the cacheManager by name
-      if (legacyMode) {
-         // make up a name
-         name = "DefaultCache" + UUID.randomUUID().toString();
-         if (cacheManager.cacheExists(name)) {
-            M_log.warn("Cache already exists and is bound to CacheManager; creating new cache from defaults: " + name);
-            // favor creation of new caches for backwards compatibility
-            // in the future, it seems like you would want to return the same
-            // cache if it already exists
-            name = name + UUID.randomUUID().toString();
-         }
+      if (cache == null && cacheManager.cacheExists(name)) {
+         // if this cache name is already in use but is not loaded from spring
+         // then we have to assume this is a mistake -AZ
+         throw new IllegalArgumentException("Tried to create a new cache with a name that is already used: " + name);
       }
 
       if (cache != null) {
@@ -330,18 +323,7 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
 
    /**
     * {@inheritDoc}
-    * 
-    * @deprecated no longer supported
-    */
-   public Cache newCache(CacheRefresher refresher, String pattern) {
-      M_log.warn("deprecated method, do NOT use");
-      return new MemCache(this, eventTrackingService, refresher, pattern, instantiateCache(
-            "MemCache", true));
-   }
-
-   /**
-    * {@inheritDoc}
-    * 
+    * (NotificationCache)
     * @deprecated no longer supported
     */
    public Cache newCache(String cacheName, CacheRefresher refresher, String pattern) {
@@ -352,7 +334,7 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
 
    /**
     * {@inheritDoc}
-    * 
+    * (SakaiSecurity)
     * @deprecated no longer supported (used by SecurityService impl which is SakaiSecurity)
     */
    public MultiRefCache newMultiRefCache(String cacheName) {
@@ -363,7 +345,7 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
 
    /**
     * {@inheritDoc}
-    * 
+    * (BaseAliasService, BaseUserDirectoryService, SiteCacheImpl)
     * @deprecated no longer supported
     */
    public Cache newCache(String cacheName, String pattern) {
@@ -391,6 +373,18 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
       M_log.warn("deprecated method that does nothing");
 
    } // unregisterCacher
+
+   /**
+    * {@inheritDoc}
+    * 
+    * @deprecated no longer supported
+    */
+   public Cache newCache(CacheRefresher refresher, String pattern) {
+      M_log.warn("deprecated method, do NOT use");
+      throw new UnsupportedOperationException("deprecated method, no longer functional");
+//      return new MemCache(this, eventTrackingService, refresher, pattern, instantiateCache(
+//            "MemCache", true));
+   }
 
    /**
     * {@inheritDoc}
@@ -423,8 +417,9 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
     */
    public Cache newCache(CacheRefresher refresher, long sleep) {
       M_log.warn("deprecated method, do NOT use");
-      return new MemCache(this, eventTrackingService, refresher, sleep, instantiateCache(
-            "MemCache", true));
+      throw new UnsupportedOperationException("deprecated method, no longer functional");
+//      return new MemCache(this, eventTrackingService, refresher, sleep, instantiateCache(
+//            "MemCache", true));
    }
 
    /**
@@ -446,7 +441,8 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
     */
    public Cache newCache() {
       M_log.warn("deprecated method, do NOT use");
-      return new MemCache(instantiateCache("MemCache", true), null, null);
+      throw new UnsupportedOperationException("deprecated method, no longer functional");
+//      return new MemCache(instantiateCache("MemCache", true), null, null);
    }
 
    /**

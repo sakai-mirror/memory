@@ -119,7 +119,9 @@ public class MemCache implements Cache {
       Object payload = null;
       if (containsKey(key)) {
          Element e = cache.get(key);
-         payload = e.getObjectValue();
+         if (e != null) {
+            payload = e.getObjectValue();
+         }
       } else {
          if (m_refresher != null) {
             // TODO - handle this with a blocking cache before merging -AZ
