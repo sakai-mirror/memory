@@ -21,6 +21,7 @@
 
 package org.sakaiproject.memory.api;
 
+import java.io.Serializable;
 import java.util.List;
 
 /**
@@ -36,29 +37,40 @@ import java.util.List;
 public interface Cache extends Cacher {
 
 	/**
-    * Cache an object which will be expired based on the sakai cache configuration
+    * Cache an object which will be expired based on the system cache configuration,
+    * if the object already exists in the cache then it will be replaced,
+    * (This method works like <b>replace</b> in the JSR-107 spec)
     * (cluster safe)
     * 
     * @param key the unique key for a cached object
-    * @param payload the cache payload (thing to cache)
+    * @param payload the cache payload (thing to cache),
+    * this should be {@link Serializable} if this is supposed to
+    * be distributable or able to be stored in the disk cache,
+    * null may be used (this will cause the cache to store a null value for this key)
     */
    void put(String key, Object payload);
 
    /**
-    * Get the non expired entry, or null if not there (or expired)
-    * (partially cluster safe)
+    * Get the cached payload, or null if not there (or expired)<br/>
+    * NOTE: this will attempt to call the {@link CacheRefresher} and get
+    * a new value for this key if one cannot be found
+    * (partially cluster safe)<br/>
+    * <b>NOTE:</b> Does not work like <b>get</b> from JSR-107 spec
     * 
     * @param key the unique key for a cached object
-    * @return The cached payload, or null if the payload is not found in the cache
+    * @return The cached payload, or null if the payload is not found in the cache,
+    * (use {@link #containsKey(String)} to differentiate between not found and stored null)
     */
    Object get(String key);
 
    /**
-    * Test if an entry exists in the cache for a key
+    * Test if an entry exists in the cache for a key,
+    * this allows us to differentiate between not found and stored null,
+    * (This method works like <b>isPresent</b> in the JSR-107 spec)
     * (partially cluster safe)
     * 
     * @param key the unique key for a cached object
-    * @return true if the key maps to a non-expired cache entry, false if not.
+    * @return true if the cache contains an entry with this key, false otherwise
     */
    boolean containsKey(String key);
 
@@ -71,15 +83,9 @@ public interface Cache extends Cacher {
    void remove(String key);
 
    /**
-    * Clear all entries from the cache (this effectively resets the cache)
-    * (cluster safe)
-    */
-   void clear();
-
-   /**
-    * Attach this DerivedCache (cache event listener) to the cache.<br/> 
-    * The DerivedCache is then notified of the cache contents changing events.
-    * This is basically a cache event listener association method.
+    * Attach a cache event listener to the cache.<br/> 
+    * The event listener ({@link DerivedCache}) is then notified of the cache contents changing events,
+    * setting this to null will clear the event listener
     * (not cluster safe)
     * <b>NOTE</b>: special method to allow cache event notification
     * (used by SiteCacheImpl only)
@@ -88,8 +94,26 @@ public interface Cache extends Cacher {
     */
    void attachDerivedCache(DerivedCache cacheEventListener);
 
+   /**
+    * Attache a cache loader to this cache<br/>
+    * The loader ({@link CacheRefresher}) will put items in the cache as they are requested (if they can be found),
+    * setting this to null will clear the loader
+    * (This method works like <b>setLoader</b> in the JSR-107 spec)
+    * (not cluster safe)
+    * <b>NOTE</b>: special method to allow self-populating for this cache
+    * 
+    * @param cacheLoader the object which implements {@link CacheRefresher}
+    */
+   void attachLoader(CacheRefresher cacheLoader);
+
 
    // TODO deprecated methods below
+
+   /**
+    * Clear all entries from the cache (this effectively resets the cache)
+    * @deprecated 07/Oct/2007 use {@link Cacher#resetCache()} instead
+    */
+   void clear();
 
    /**
     * Clear all entries and shutdown the cache<br/>
