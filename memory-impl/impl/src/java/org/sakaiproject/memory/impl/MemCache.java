@@ -45,8 +45,8 @@ import org.sakaiproject.memory.api.DerivedCache;
  * This allows the developer to access a cache created for their use,
  * create this cache using the {@link MemoryService}
  */
-public class MemCache implements Cache
-{
+public class MemCache implements Cache {
+
    /** Our logger. */
    private static Log log = LogFactory.getLog(MemCache.class);
 
@@ -85,8 +85,10 @@ public class MemCache implements Cache
    }
 
    public void put(String key, Object payload) {
-      if (log.isDebugEnabled()) {
-         log.debug("put(String " + key + ", Object " + payload + ")");
+      if (log.isDebugEnabled()) log.debug("put(String " + key + ", Object " + payload + ")");
+
+      if (key == null || "".equals(key)) {
+         throw new IllegalArgumentException("key cannot be null or empty string");
       }
 
       cache.put(new Element(key, payload));
@@ -96,8 +98,11 @@ public class MemCache implements Cache
 
 
    public boolean containsKey(String key) {
-      if (log.isDebugEnabled()) {
-         log.debug("containsKey(Object " + key + ")");
+      if (log.isDebugEnabled()) log.debug("containsKey(Object " + key + ")");
+
+      if (key == null || "".equals(key)) {
+         // this is here for backwards compatibility
+         log.warn("key should not be null or empty string, this will always yield false");
       }
 
       return cache.isKeyInCache(key);
@@ -105,13 +110,17 @@ public class MemCache implements Cache
 
 
    public Object get(String key) {
-      if (log.isDebugEnabled()) {
-         log.debug("get(Object " + key + ")");
+      if (log.isDebugEnabled()) log.debug("get(Object " + key + ")");
+
+      if (key == null || "".equals(key)) {
+         throw new IllegalArgumentException("key cannot be null or empty string");
       }
 
-      final Element e = cache.get(key);
       Object payload = null;
-      if (e == null) {
+      if (containsKey(key)) {
+         Element e = cache.get(key);
+         payload = e.getObjectValue();
+      } else {
          if (m_refresher != null) {
             // TODO - handle this with a blocking cache before merging -AZ
             payload = m_refresher.refresh(key, null, null);
@@ -119,29 +128,38 @@ public class MemCache implements Cache
                put(key, payload);
             }
          }
-      } else {
-         payload = e.getObjectValue();
       }
-
-      return payload;
-
-   } // get
+      final Object value = payload;
+      return value;
+   }
 
 
    public void remove(String key) {
-      if (log.isDebugEnabled()) {
-         log.debug("remove(" + key + ")");
+      if (log.isDebugEnabled()) log.debug("remove(" + key + ")");
+
+      // disabled for backwards compatibility -AZ
+//      if (key == null || "".equals(key)) {
+//         throw new IllegalArgumentException("key cannot be null or empty string");
+//      }
+
+      if (containsKey(key)) {
+         // get the value out to send to the notifier
+         Element e = cache.get(key);
+         final Object payload = e.getObjectValue();
+
+         // remove the entry
+         cache.remove(key);
+
+         if (m_derivedCache != null) {
+            m_derivedCache.notifyCacheRemove(key, payload); // TODO - handle this with ehcache notifiers
+         }
       }
 
-      final Object value = get(key);
-      cache.remove(key);
-
-      if (m_derivedCache != null) m_derivedCache.notifyCacheRemove(key, value); // TODO - handle this with ehcache notifiers
    } // remove
 
 
    public void clear() {
-      log.debug("clear()");
+      log.debug("clearing cache");
 
       cache.removeAll();  //TODO Do we boolean doNotNotifyCacheReplicators? Ian? -I think we do want to notify the replicators unless we are trying to support clearing the cache on one server only (the repicator will refill this cache though) -AZ
       cache.clearStatistics();
@@ -151,18 +169,23 @@ public class MemCache implements Cache
    } // clear
 
 
-   public void attachDerivedCache(DerivedCache cache) {
+   public void attachDerivedCache(DerivedCache cacheEventListener) {
       // Note: only one is supported
-      if (cache == null) {
+      if (cacheEventListener == null) {
          m_derivedCache = null;
       } else {
          // TODO shouldn't we allow someone to attach a new listener? -AZ
          if (m_derivedCache != null) {
             log.warn("attachDerivedCache - already got one and will not override (not sure why we won't though)");
          } else {
-            m_derivedCache = cache;
+            m_derivedCache = cacheEventListener;
          }
       }
+   }
+
+
+   public void attachLoader(CacheRefresher cacheLoader) {
+      m_refresher = cacheLoader;
    }
 
 

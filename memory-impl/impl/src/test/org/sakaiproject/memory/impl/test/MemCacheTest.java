@@ -8,9 +8,6 @@ import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;
 import net.sf.ehcache.Ehcache;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 import org.sakaiproject.memory.impl.MemCache;
 import org.springframework.test.AbstractSingleSpringContextTests;
 
@@ -22,7 +19,7 @@ import org.springframework.test.AbstractSingleSpringContextTests;
  */
 public class MemCacheTest extends AbstractSingleSpringContextTests {
 
-   private static Log log = LogFactory.getLog(MemCacheTest.class);
+//   private static Log log = LogFactory.getLog(MemCacheTest.class);
 
    protected MemCache testCache = null;
    protected CacheManager cacheManager = null;
@@ -109,35 +106,131 @@ public class MemCacheTest extends AbstractSingleSpringContextTests {
     * Test method for {@link org.sakaiproject.memory.impl.MemCache#put(java.lang.String, java.lang.Object)}.
     */
    public void testPutStringObject() {
-   // TODO      fail("Not yet implemented");
+      // try putting a few things
+      testCache.put("key1", "THING");
+
+      testCache.put("key2", new Long(2));
+
+      // try replacing the value (should work fine)
+      assertEquals("THING", testCache.get("key1"));
+      testCache.put("key1", "NEWTHING");
+      assertEquals("NEWTHING", testCache.get("key1"));
+
+      // test that size is increasing
+      assertEquals(2, testCache.getSize());
+      testCache.put("key3", "THREE");
+      assertEquals("THREE", testCache.get("key3"));
+      assertEquals(3, testCache.getSize());
+
+      // test storing a null works ok
+      testCache.put("key3", null);
+      assertEquals(null, testCache.get("key3"));
+      assertEquals(3, testCache.getSize());
+
+      // test if key is invalid causes failure
+      try {
+         testCache.put(null, "THING");
+         fail("Should not have gotten here");
+      } catch (IllegalArgumentException e) {
+         assertNotNull(e.getMessage());
+      }
+
+      try {
+         testCache.put("", "THING");
+         fail("Should not have gotten here");
+      } catch (IllegalArgumentException e) {
+         assertNotNull(e.getMessage());
+      }
    }
 
    /**
     * Test method for {@link org.sakaiproject.memory.impl.MemCache#containsKey(java.lang.String)}.
     */
    public void testContainsKey() {
-   // TODO      fail("Not yet implemented");
+      testCache.put("key1", "THING1");
+      testCache.put("key2", null);
+      
+      assertTrue(testCache.containsKey("key1"));
+      assertTrue(testCache.containsKey("key2"));
+      assertFalse(testCache.containsKey("key3"));
+
+      // these are ok but discouraged with log warning
+      assertFalse(testCache.containsKey(""));
+      assertFalse(testCache.containsKey(null));
+
+      // this is disabled for now since it is only in for backwards compatibility
+//    // test using invalid key causes failure
+//    try {
+//       assertFalse(testCache.containsKey(null));
+//       fail("Should not have gotten here");
+//    } catch (IllegalArgumentException e) {
+//       assertNotNull(e.getMessage());
+//    }
    }
 
    /**
     * Test method for {@link org.sakaiproject.memory.impl.MemCache#get(java.lang.String)}.
     */
    public void testGet() {
-   // TODO      fail("Not yet implemented");
+      Object payload = null;
+
+      // load up test data
+      Object testPayload = new Long(123);
+      testCache.put("key1", testPayload);
+      testCache.put("key2", null);
+
+      // testing getting normal object
+      payload = testCache.get("key1");
+      assertNotNull(payload);
+      assertEquals(testPayload, payload);
+
+      // test getting a null
+      payload = testCache.get("key2");
+      assertNull(payload);
+
+      // test getting invalid
+      payload = testCache.get("key3");
+      assertNull(payload);
+
+      // test using invalid key causes failure
+      try {
+         payload = testCache.get(null);
+         fail("Should not have gotten here");
+      } catch (IllegalArgumentException e) {
+         assertNotNull(e.getMessage());
+      }
    }
 
    /**
     * Test method for {@link org.sakaiproject.memory.impl.MemCache#remove(java.lang.String)}.
     */
    public void testRemove() {
-   // TODO      fail("Not yet implemented");
-   }
+      // load up some data
+      testCache.put("key1", "THING1");
+      testCache.put("key2", null);
+      
+      // test removing normal stuff
+      assertTrue(testCache.containsKey("key1"));
+      testCache.remove("key1");
+      assertFalse(testCache.containsKey("key1"));
 
-   /**
-    * Test method for {@link org.sakaiproject.memory.impl.MemCache#clear()}.
-    */
-   public void testClear() {
-   // TODO      fail("Not yet implemented");
+      // test removing null cached item
+      assertTrue(testCache.containsKey("key2"));
+      testCache.remove("key2");
+      assertFalse(testCache.containsKey("key2"));
+
+      // test removing invalid item (should be ok)
+      assertFalse(testCache.containsKey("key3"));
+      testCache.remove("key3");
+
+      // this is disabled for now since it is only in for backwards compatibility
+//      // test using invalid key causes failure
+//      try {
+//         testCache.remove(null);
+//         fail("Should not have gotten here");
+//      } catch (IllegalArgumentException e) {
+//         assertNotNull(e.getMessage());
+//      }
    }
 
    /**
@@ -148,24 +241,53 @@ public class MemCacheTest extends AbstractSingleSpringContextTests {
    }
 
    /**
+    * Test method for {@link MemCache#attachLoader(org.sakaiproject.memory.api.CacheRefresher)}
+    */
+   public void testAttachLoader() {
+      // TODO      fail("Not yet implemented");
+   }
+
+   /**
     * Test method for {@link org.sakaiproject.memory.impl.MemCache#resetCache()}.
     */
    public void testResetCache() {
-   // TODO      fail("Not yet implemented");
+      assertEquals(0, testCache.getSize());
+      
+      // try it on an empty cache
+      testCache.resetCache();
+
+      // load up some data
+      testCache.put("key1", "THING1");
+      testCache.put("key2", null);
+
+      assertEquals(2, testCache.getSize());
+
+      // now on one with items
+      testCache.resetCache();
+      assertEquals(0, testCache.getSize());
    }
 
    /**
     * Test method for {@link org.sakaiproject.memory.impl.MemCache#getSize()}.
     */
    public void testGetSize() {
-   // TODO      fail("Not yet implemented");
+      assertEquals(0, testCache.getSize());
+
+      // load up some data
+      testCache.put("key1", "THING1");
+      testCache.put("key2", null);
+
+      assertEquals(2, testCache.getSize());
+
+      // not much to test here
    }
 
    /**
     * Test method for {@link org.sakaiproject.memory.impl.MemCache#getDescription()}.
     */
    public void testGetDescription() {
-   // TODO      fail("Not yet implemented");
+      // just see if it works
+      assertNotNull(testCache.getDescription());
    }
 
 }
