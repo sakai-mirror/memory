@@ -8,6 +8,9 @@ import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;
 import net.sf.ehcache.Ehcache;
 
+import org.sakaiproject.event.api.Event;
+import org.sakaiproject.memory.api.CacheRefresher;
+import org.sakaiproject.memory.api.DerivedCache;
 import org.sakaiproject.memory.impl.MemCache;
 import org.springframework.test.AbstractSingleSpringContextTests;
 
@@ -19,7 +22,7 @@ import org.springframework.test.AbstractSingleSpringContextTests;
  */
 public class MemCacheTest extends AbstractSingleSpringContextTests {
 
-//   private static Log log = LogFactory.getLog(MemCacheTest.class);
+// private static Log log = LogFactory.getLog(MemCacheTest.class);
 
    protected MemCache testCache = null;
    protected CacheManager cacheManager = null;
@@ -30,8 +33,8 @@ public class MemCacheTest extends AbstractSingleSpringContextTests {
    final String CACHENAME3 = "cache 3";
 
 
-//   private EntityManager entityManager;
-//   private MockControl entityManagerControl;
+// private EntityManager entityManager;
+// private MockControl entityManagerControl;
 
    protected String[] getConfigLocations() {
       // point to the needed spring config files, must be on the classpath
@@ -39,12 +42,12 @@ public class MemCacheTest extends AbstractSingleSpringContextTests {
       // they also need to be referenced in the project.xml file
       return new String[] { "ehcache-beans.xml" };
    }
-   
+
    @Override
    protected void onSetUp() throws Exception {
       // load the spring created dao class bean from the Spring Application Context
       cacheManager = (CacheManager) applicationContext
-            .getBean("org.sakaiproject.memory.api.MemoryService.cacheManager");
+      .getBean("org.sakaiproject.memory.api.MemoryService.cacheManager");
       if (cacheManager == null) {
          throw new NullPointerException("CacheManager could not be retrieved from spring context");
       }
@@ -55,8 +58,8 @@ public class MemCacheTest extends AbstractSingleSpringContextTests {
       // load up any other needed spring beans
 
       // setup the mock objects if needed
-//      entityManagerControl = MockControl.createControl(EntityManager.class);
-//      entityManager = (EntityManager) entityManagerControl.getMock();
+//    entityManagerControl = MockControl.createControl(EntityManager.class);
+//    entityManager = (EntityManager) entityManagerControl.getMock();
 
       // setup fake internal services
 
@@ -64,7 +67,7 @@ public class MemCacheTest extends AbstractSingleSpringContextTests {
       cacheManager.addCache(CACHENAME1);
       testCache = new MemCache(cacheManager.getEhcache(CACHENAME1), null, null);
    }
-   
+
    @Override 
    protected void onTearDown() throws Exception {
       // cleanup the added cache
@@ -89,7 +92,7 @@ public class MemCacheTest extends AbstractSingleSpringContextTests {
       } catch (IllegalArgumentException e) {
          assertNotNull(e.getMessage());
       }
-      
+
       // test if including null causes failure
       try {
          cache = new MemCache((Ehcache)null, null, null);
@@ -97,7 +100,7 @@ public class MemCacheTest extends AbstractSingleSpringContextTests {
       } catch (NullPointerException e) {
          assertNotNull(e.getMessage());
       }
-      
+
       // cleanup
       cacheManager.removeCache(CACHENAME2);
    }
@@ -149,7 +152,7 @@ public class MemCacheTest extends AbstractSingleSpringContextTests {
    public void testContainsKey() {
       testCache.put("key1", "THING1");
       testCache.put("key2", null);
-      
+
       assertTrue(testCache.containsKey("key1"));
       assertTrue(testCache.containsKey("key2"));
       assertFalse(testCache.containsKey("key3"));
@@ -161,10 +164,10 @@ public class MemCacheTest extends AbstractSingleSpringContextTests {
       // this is disabled for now since it is only in for backwards compatibility
 //    // test using invalid key causes failure
 //    try {
-//       assertFalse(testCache.containsKey(null));
-//       fail("Should not have gotten here");
+//    assertFalse(testCache.containsKey(null));
+//    fail("Should not have gotten here");
 //    } catch (IllegalArgumentException e) {
-//       assertNotNull(e.getMessage());
+//    assertNotNull(e.getMessage());
 //    }
    }
 
@@ -208,7 +211,7 @@ public class MemCacheTest extends AbstractSingleSpringContextTests {
       // load up some data
       testCache.put("key1", "THING1");
       testCache.put("key2", null);
-      
+
       // test removing normal stuff
       assertTrue(testCache.containsKey("key1"));
       testCache.remove("key1");
@@ -224,27 +227,96 @@ public class MemCacheTest extends AbstractSingleSpringContextTests {
       testCache.remove("key3");
 
       // this is disabled for now since it is only in for backwards compatibility
-//      // test using invalid key causes failure
-//      try {
-//         testCache.remove(null);
-//         fail("Should not have gotten here");
-//      } catch (IllegalArgumentException e) {
-//         assertNotNull(e.getMessage());
-//      }
+//    // test using invalid key causes failure
+//    try {
+//    testCache.remove(null);
+//    fail("Should not have gotten here");
+//    } catch (IllegalArgumentException e) {
+//    assertNotNull(e.getMessage());
+//    }
    }
 
    /**
     * Test method for {@link org.sakaiproject.memory.impl.MemCache#attachDerivedCache(org.sakaiproject.memory.api.DerivedCache)}.
     */
    public void testAttachDerivedCache() {
-   // TODO      fail("Not yet implemented");
+      // generate a cache event listener class for testing
+      final String[] status = new String[1];
+      DerivedCache cacheEventListener = new DerivedCache() {
+         public void notifyCacheClear() {
+            status[0] = "CLEAR";
+         }
+         public void notifyCachePut(String key, Object payload) {
+            status[0] = "PUT";
+         }
+         public void notifyCacheRemove(String key, Object payload) {
+            status[0] = "REMOVE";
+         }
+      };
+
+      // attach the listener
+      testCache.attachDerivedCache(cacheEventListener);
+
+      // check the listener works
+      assertEquals(0, testCache.getSize());
+      assertNull(status[0]);
+      testCache.put("3.1", "blah");
+      assertEquals("PUT", status[0]);
+      testCache.remove("3.1");
+      assertEquals("REMOVE", status[0]);
+      testCache.clear();
+      assertEquals("CLEAR", status[0]);
+      assertEquals(0, testCache.getSize());
+
+      // clear the listener
+      testCache.attachDerivedCache(null);
+
+      // test it is not listening anymore
+      status[0] = null;
+      assertNull(status[0]);
+      testCache.put("3.2", "blah");
+      assertNull(status[0]);
+      testCache.remove("3.2");
+      assertNull(status[0]);
+      testCache.clear();
+      assertNull(status[0]);
+      assertEquals(0, testCache.getSize());
    }
 
    /**
     * Test method for {@link MemCache#attachLoader(org.sakaiproject.memory.api.CacheRefresher)}
     */
    public void testAttachLoader() {
-      // TODO      fail("Not yet implemented");
+      // generate a cache loader class for testing
+      CacheRefresher cacheLoader = new CacheRefresher() {
+         public Object refresh(Object key, Object oldValue, Event event) {
+            if (key.equals("TESTKEY")) {
+               return "UPDATED";
+            }
+            return null;
+         }
+      };
+
+      // attach the loader
+      testCache.attachLoader(cacheLoader);
+
+      // test that the loader works
+      assertEquals(0, testCache.getSize());
+      assertNull(testCache.get("INVALID"));
+      assertEquals(0, testCache.getSize());
+      assertEquals("UPDATED", testCache.get("TESTKEY"));
+      assertEquals(1, testCache.getSize());
+
+      // reset cache
+      testCache.resetCache();
+
+      // clear the loader
+      testCache.attachLoader(null);
+
+      // test that the loader does not activate
+      assertEquals(0, testCache.getSize());
+      assertEquals(null, testCache.get("TESTKEY"));
+      assertEquals(0, testCache.getSize());
    }
 
    /**
@@ -252,7 +324,7 @@ public class MemCacheTest extends AbstractSingleSpringContextTests {
     */
    public void testResetCache() {
       assertEquals(0, testCache.getSize());
-      
+
       // try it on an empty cache
       testCache.resetCache();
 
