@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+   <modelVersion>4.0.0</modelVersion>
+   <name>sakai-memory-test-pack</name>
+   <groupId>org.sakaiproject</groupId>
+   <artifactId>sakai-memory-test-pack</artifactId>
+   <organization>
+      <name>University of Cambridge</name>
+      <url>http://caret.cam.ac.uk/</url>
+   </organization>
+   <inceptionYear>2007</inceptionYear>
+   <packaging>sakai-component</packaging>
+   <properties>
+      <deploy.target>components</deploy.target>
+   </properties>
+
+   <parent>
+      <artifactId>memory-test-base</artifactId>
+      <groupId>org.sakaiproject</groupId>
+      <version>M2</version>
+      <relativePath>../pom.xml</relativePath>
+   </parent>
+
+   <dependencies>
+
+      <dependency>
+         <groupId>org.sakaiproject</groupId>
+         <artifactId>sakai-memory-test</artifactId>
+         <version>${sakai.version}</version>
+      </dependency>
+
+      <dependency>
+         <groupId>sakaiproject</groupId>
+         <artifactId>sakai-testexecutor</artifactId>
+         <version>1.0</version>
+         <scope>runtime</scope>
+      </dependency>
+
+   </dependencies>
+
+   <build />
+
+</project>

@@ -52,7 +52,7 @@ import org.springframework.context.ApplicationContextAware;
  * Major deprecation and refactoring by AZ
  */
 public class BasicMemoryService implements MemoryService, ApplicationContextAware {
-
+ 
    /** Our logger. */
    private static Log M_log = LogFactory.getLog(BasicMemoryService.class);
 

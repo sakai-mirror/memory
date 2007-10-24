@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
+
+<beans>
+
+   <!-- testing beans -->
+   <bean class="org.sakaiproject.testrunner.util.TestExecutor" init-method="executeTests">
+      <property name="testClassname" value="org.sakaiproject.entitybrokertest.logic.impl.test.LoadTestUserEntity" />
+   </bean>
+
+</beans>
