@@ -72,25 +72,21 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
 
    /** The underlying cache manager; injected */
    protected net.sf.ehcache.CacheManager cacheManager;
-
    public void setCacheManager(net.sf.ehcache.CacheManager cacheManager) {
       this.cacheManager = cacheManager;
    }
 
    protected SecurityService securityService;
-
    public void setSecurityService(SecurityService securityService) {
       this.securityService = securityService;
    }
 
    protected SessionManager sessionManager;
-
    public void setSessionManager(SessionManager sessionManager) {
       this.sessionManager = sessionManager;
    }
 
    protected EventTrackingService eventTrackingService;
-
    public void setEventTrackingService(EventTrackingService eventTrackingService) {
       this.eventTrackingService = eventTrackingService;
    }
@@ -131,46 +127,57 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
    } // getAvailableMemory
 
    public String getStatus() {
-      final StringBuilder buf = new StringBuilder();
-      buf.append("** Memory report\n");
-      buf.append("freeMemory: " + Runtime.getRuntime().freeMemory());
-      buf.append(" totalMemory: ");
-      buf.append(Runtime.getRuntime().totalMemory());
-      buf.append(" maxMemory: ");
-      buf.append(Runtime.getRuntime().maxMemory());
-      buf.append("\n\n");
+      final StringBuilder sb = new StringBuilder();
 
-      List<Ehcache> allCaches = getAllCaches(true);
+      sb.append("** Memory report\n");
+      sb.append("freeMemory: " + Runtime.getRuntime().freeMemory());
+      sb.append("\n");
+      sb.append(" totalMemory: " + Runtime.getRuntime().totalMemory());
+      sb.append("\n");
+      sb.append(" maxMemory: " + Runtime.getRuntime().maxMemory());
+      sb.append("\n");
 
-      // summary
-      for (Ehcache cache : allCaches) {
-         final long hits = cache.getStatistics().getCacheHits();
-         final long misses = cache.getStatistics().getCacheMisses();
-         final long total = hits + misses;
-         final long hitRatio = ((total > 0) ? ((100l * hits) / total) : 0);
-         buf.append(cache.getName() + ": " + " count:" + cache.getStatistics().getObjectCount()
-               + " hits:" + hits + " misses:" + misses + " hit%:" + hitRatio);
-         buf.append("\n");
+
+      // caches summary
+      sb.append("\n** Cache descriptions for registered caches ("+cachesRecord.size()+"):\n");
+      for (Cache cache : cachesRecord.values()) {
+         sb.append(" * " + cache.getDescription() );
+         sb.append("\n");
       }
 
       // extended report
-      buf.append("\n** Extended Cache Report\n");
-      for (Object ehcache : allCaches) {
-         buf.append(ehcache.toString());
-         buf.append("\n");
+      List<Ehcache> allCaches = getAllCaches(true);
+      sb.append("\n** Full report of all known caches ("+allCaches.size()+"):\n");
+      for (Ehcache ehcache : allCaches) {
+         sb.append(" * " + generateCacheStats(ehcache));
+         sb.append("\n");
+         sb.append(ehcache.toString());
+         sb.append("\n");
       }
 
-      // Iterator<Cacher> it = m_cachers.iterator();
-      // while (it.hasNext())
-      // {
-      // Cacher cacher = (Cacher) it.next();
-      // buf.append(cacher.getSize() + " in " + cacher.getDescription() + "\n");
-      // }
-
-      final String rv = buf.toString();
+      final String rv = sb.toString();
       M_log.info(rv);
 
       return rv;
+   }
+
+
+   /**
+    * Generate some stats for this cache
+    */
+   protected static String generateCacheStats(Ehcache cache) {
+      StringBuilder sb = new StringBuilder();
+      sb.append(cache.getName() + ":");
+      final long hits = cache.getStatistics().getCacheHits();
+      final long misses = cache.getStatistics().getCacheMisses();
+      final String hitPercentage = ((hits+misses) > 0) ? ((100l * hits) / (hits + misses)) + "%" : "N/A";
+      final String missPercentage = ((hits+misses) > 0) ? ((100l * misses) / (hits + misses)) + "%" : "N/A";
+      sb.append("  Size:" + cache.getSize() + " [memory:" + cache.getMemoryStoreSize() + 
+            ", disk:" + cache.getDiskStoreSize() + "]");
+      sb.append(",  Hits:" + hits + " [memory:" + cache.getStatistics().getInMemoryHits() + 
+            ", disk:" + cache.getStatistics().getOnDiskHits() + "] (" + hitPercentage + ")");
+      sb.append(",  Misses:" + misses + " (" + missPercentage + ")");
+      return sb.toString();
    }
 
 
@@ -180,17 +187,21 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
 
    public Cache newCache(String cacheName, CacheRefresher refresher, DerivedCache notifer,
          boolean distributed, boolean replicated) {
-      // TODO - handle the distributed and replicated settings
       if (cacheName == null || "".equals(cacheName)) {
          throw new IllegalArgumentException("cacheName cannot be null or empty string");
       }
 
-      M_log.warn("boolean distributed, boolean replicated not being handled yet");
+      // TODO - handle the distributed and replicated settings
+      if (distributed || replicated) {
+         M_log.warn("boolean distributed, boolean replicated not being handled yet");
+      }
+
       Cache c = cachesRecord.get(cacheName);
       if (c == null) {
          c = new MemCache(instantiateCache(cacheName), refresher, notifer);
       }
       cachesRecord.put(cacheName, c);
+
       return c;
    }
 
@@ -328,10 +339,17 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
     */
    public MultiRefCache newMultiRefCache(String cacheName) {
       M_log.warn("deprecated method, do NOT use: newMultiRefCache(String cacheName)");
-      return new MultiRefCacheImpl(this, 
-            eventTrackingService, 
-            instantiateCache(cacheName),
-            instantiateCache(ORG_SAKAIPROJECT_MEMORY_MEMORY_SERVICE_MREF_MAP));
+
+      MultiRefCache mrc = (MultiRefCache) cachesRecord.get(cacheName);
+      if (mrc == null) {
+         mrc = new MultiRefCacheImpl(this, 
+               eventTrackingService, 
+               instantiateCache(cacheName),
+               instantiateCache(ORG_SAKAIPROJECT_MEMORY_MEMORY_SERVICE_MREF_MAP));
+      }
+      cachesRecord.put(cacheName, mrc);
+
+      return mrc;
    }
 
    /**

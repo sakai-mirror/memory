@@ -21,6 +21,7 @@
 
 package org.sakaiproject.memory.impl;
 
+import java.io.Serializable;
 import java.lang.ref.SoftReference;
 import java.util.HashSet;
 import java.util.List;
@@ -97,6 +98,16 @@ public class MemCache implements Cache {
       if (key == null || "".equals(key)) {
          throw new IllegalArgumentException("key cannot be null or empty string");
       }
+      
+      if (distributed == true || cache.isOverflowToDisk()) {
+         if (! (key instanceof Serializable)) {
+            log.warn("Using non-serializable key for distributed or disk stored cache (" + cache.getName() +
+                  ") is bad since things will not work, please make sure your key is serializable");
+         } else if (! (payload instanceof Serializable)) {
+            log.warn("Using non-serializable payload for distributed or disk stored cache (" + cache.getName() + 
+                  ") is bad since things will not work, please make sure your payload is serializable");
+         }
+      }
 
       cache.put(new Element(key, payload));
 
@@ -149,8 +160,9 @@ public class MemCache implements Cache {
       Element e = cache.get(key);
       if (e != null) {
          // attempt to get the serialized value first
-         payload = e.getValue();
-         if (payload == null) {
+         if (e.isSerializable()) {
+            payload = e.getValue();
+         } else {
             // not serializable so get the object value
             payload = e.getObjectValue();
          }
@@ -183,13 +195,7 @@ public class MemCache implements Cache {
 
 
    public void clear() {
-      log.debug("clearing cache");
-
-      cache.removeAll();  //TODO Do we boolean doNotNotifyCacheReplicators? Ian? -I think we do want to notify the replicators unless we are trying to support clearing the cache on one server only (the repicator will refill this cache though) -AZ
-      cache.clearStatistics();
-
-      if (m_derivedCache != null) m_derivedCache.notifyCacheClear(); // TODO - handle this with ehcache notifiers
-
+      resetCache();
    } // clear
 
 
@@ -218,31 +224,22 @@ public class MemCache implements Cache {
     *********************************************************************************************************************************************************************************************************************************************************/
 
    public void resetCache() {
-      log.debug("resetCache()");
-      clear();
+      log.debug("clearing cache");
+
+      cache.removeAll();  //TODO Do we boolean doNotNotifyCacheReplicators? Ian? -I think we do want to notify the replicators unless we are trying to support clearing the cache on one server only (the repicator will refill this cache though) -AZ
+      cache.clearStatistics();
+
+      if (m_derivedCache != null) m_derivedCache.notifyCacheClear(); // TODO - handle this with ehcache notifiers
    } // resetCache
 
    public long getSize() {
       log.debug("getSize()");
-      return cache.getStatistics().getObjectCount();
+      return cache.getSize();
    }
 
    public String getDescription() {
-      final StringBuilder buf = new StringBuilder();
-      buf.append("MemCache");
-
-      // TODO remove this part -AZ
-      if (m_resourcePattern != null) {
-         buf.append(" " + m_resourcePattern);
-      }
-
-      final long hits = cache.getStatistics().getCacheHits();
-      final long misses = cache.getStatistics().getCacheMisses();
-      final long total = hits + misses;
-      buf.append("  hits:" + hits + "  misses:" + misses + "  hit%:"
-            + ((total > 0) ? "" + ((100l * hits) / total) : "n/a"));
-
-      return buf.toString();
+      // just using the method from the memory service for now, probably should be a util -AZ
+      return BasicMemoryService.generateCacheStats(cache);
    }
 
    
