@@ -172,11 +172,11 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
       final long misses = cache.getStatistics().getCacheMisses();
       final String hitPercentage = ((hits+misses) > 0) ? ((100l * hits) / (hits + misses)) + "%" : "N/A";
       final String missPercentage = ((hits+misses) > 0) ? ((100l * misses) / (hits + misses)) + "%" : "N/A";
-      sb.append("  Size:" + cache.getSize() + " [memory:" + cache.getMemoryStoreSize() + 
+      sb.append("  Size: " + cache.getSize() + " [memory:" + cache.getMemoryStoreSize() + 
             ", disk:" + cache.getDiskStoreSize() + "]");
-      sb.append(",  Hits:" + hits + " [memory:" + cache.getStatistics().getInMemoryHits() + 
+      sb.append(",  Hits: " + hits + " [memory:" + cache.getStatistics().getInMemoryHits() + 
             ", disk:" + cache.getStatistics().getOnDiskHits() + "] (" + hitPercentage + ")");
-      sb.append(",  Misses:" + misses + " (" + missPercentage + ")");
+      sb.append(",  Misses: " + misses + " (" + missPercentage + ")");
       return sb.toString();
    }
 
