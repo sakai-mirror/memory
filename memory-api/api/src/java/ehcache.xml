@@ -1,4 +1,6 @@
-<ehcache>
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE beans PUBLIC "-//SPRING//DTD BEAN//EN" "http://www.springframework.org/dtd/spring-beans.dtd">
+<ehcache xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="ehcache.xsd">
 
     <!-- Sets the path to the directory where cache .data files are created.
 
@@ -9,6 +11,7 @@
          user.home - User's home directory
          user.dir - User's current working directory
          java.io.tmpdir - Default temp file path -->
+
     <diskStore path="java.io.tmpdir"/>
 
 
@@ -175,14 +178,14 @@
          maxElementsInMemory="10000"
          eternal="false"
          timeToIdleSeconds="120"
-         timeToLiveSeconds="120"
+         timeToLiveSeconds="180"
          overflowToDisk="true"
          diskSpoolBufferSizeMB="30"
-         maxElementsOnDisk="10000000"
+         maxElementsOnDisk="100000"
          diskPersistent="false"
          diskExpiryThreadIntervalSeconds="120"
-         memoryStoreEvictionPolicy="LFU"
-      />
+         memoryStoreEvictionPolicy="LFU">
+     </defaultCache>
 
 
     <!--Predefined caches.  Add your cache configuration settings here.
@@ -239,16 +242,72 @@
          maxElementsOnDisk="250000"
          diskPersistent="false"
          diskExpiryThreadIntervalSeconds="120">
-      <cacheEventListenerFactory class="net.sf.ehcache.distribution.RMICacheReplicatorFactory" 
-         properties="replicateAsynchronously=true, 
-            replicatePuts=true, 
-            replicateUpdates=true, 
-            replicateUpdatesViaCopy=false, 
-            replicateRemovals=true "/>
+   </cache>
+
+   <!-- settings for the authz cache -->
+   <cache name="org.sakaiproject.authz.api.SecurityService.cache"
+         maxElementsInMemory="20000"
+         eternal="false"
+         timeToIdleSeconds="1800"
+         timeToLiveSeconds="2400"
+         overflowToDisk="true"
+         diskSpoolBufferSizeMB="30"
+         maxElementsOnDisk="100000"
+         diskPersistent="false"
+         diskExpiryThreadIntervalSeconds="120"
+         memoryStoreEvictionPolicy="LFU">
+   </cache>
+
+   <!-- replacement for the multiref cache reference holder,
+       this has to be eternal because the references only get set once,
+       overflowing to disk because this is eternal (to avoid huge in-memory costs) -->
+   <cache name="org.sakaiproject.memory.MemoryService.mref_map"
+         maxElementsInMemory="1000"
+         eternal="true"
+         timeToIdleSeconds="1000"
+         timeToLiveSeconds="1000"
+         memoryStoreEvictionPolicy="LFU"
+         overflowToDisk="true"
+         diskSpoolBufferSizeMB="30"
+         maxElementsOnDisk="200000"
+         diskPersistent="false"
+         diskExpiryThreadIntervalSeconds="120">
    </cache>
 
 
-<!--
+<!-- DISTRIBUTED CACHING
+
+    Add cacheEventListenerFactory to the cache
+    ==========================================
+         <cacheEventListenerFactory class="net.sf.ehcache.distribution.RMICacheReplicatorFactory" 
+            properties="replicateAsynchronously=true, 
+               replicatePuts=true, 
+               replicateUpdates=true, 
+               replicateUpdatesViaCopy=false, 
+               replicateRemovals=true "/>
+    
+    For Example:
+    ============
+    <cache name="org.sakaiproject.authz.api.SecurityService.cache"
+         maxElementsInMemory="20000"
+         eternal="false"
+         timeToIdleSeconds="1800"
+         timeToLiveSeconds="2400"
+         overflowToDisk="true"
+         diskSpoolBufferSizeMB="30"
+         maxElementsOnDisk="100000"
+         diskPersistent="true"
+         diskExpiryThreadIntervalSeconds="120"
+         memoryStoreEvictionPolicy="LFU">
+         <cacheEventListenerFactory class="net.sf.ehcache.distribution.RMICacheReplicatorFactory" 
+            properties="replicateAsynchronously=true, 
+               replicatePuts=true, 
+               replicateUpdates=true, 
+               replicateUpdatesViaCopy=false, 
+               replicateRemovals=true "/>
+   </cache>
+
+
     CacheManagerPeerProvider
     ========================
     (Enable for distributed operation)
