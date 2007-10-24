@@ -56,11 +56,18 @@ public class MemCache implements Cache {
    /** The object that will deal with missing entries. */
    protected CacheRefresher m_refresher = null;
 
-   /** If true, we are disabled. */
-   protected boolean m_disabled = false;
-
    /** This is the notifier for this cache (if one is set) */
    protected DerivedCache m_derivedCache = null;
+
+   /**
+    * is this cache distributed, if false then it is local only
+    */
+   protected boolean distributed = true;
+   /**
+    * is this cache replicated, if false then entries are not copied over to other nodes in the cluster
+    */
+   protected boolean replicated = false;
+
 
    /**
     * Create a MemCache object which gives us access to the cache and applies the
@@ -71,7 +78,7 @@ public class MemCache implements Cache {
     * @param notifier (optional) an object that implements {@link DerivedCache} or null
     */
    public MemCache(Ehcache cache, CacheRefresher refresher, DerivedCache notifier) {
-      // inject our dependencies
+      // setup the cache
       if (cache == null) {
          throw new NullPointerException("cache must be set");
       } else {
@@ -118,10 +125,7 @@ public class MemCache implements Cache {
 
       Object payload = null;
       if (containsKey(key)) {
-         Element e = cache.get(key);
-         if (e != null) {
-            payload = e.getObjectValue();
-         }
+         payload = getCachePayload(key);
       } else {
          if (m_refresher != null) {
             // TODO - handle this with a blocking cache before merging -AZ
@@ -135,6 +139,25 @@ public class MemCache implements Cache {
       return value;
    }
 
+   /**
+    * Retrieve a payload from the cache for this key if one can be found
+    * @param key the key for this cache element
+    * @return the payload or null if none found
+    */
+   private Object getCachePayload(String key) {
+      Object payload = null;
+      Element e = cache.get(key);
+      if (e != null) {
+         // attempt to get the serialized value first
+         payload = e.getValue();
+         if (payload == null) {
+            // not serializable so get the object value
+            payload = e.getObjectValue();
+         }
+      }
+      return payload;
+   }
+
 
    public void remove(String key) {
       if (log.isDebugEnabled()) log.debug("remove(" + key + ")");
@@ -146,8 +169,7 @@ public class MemCache implements Cache {
 
       if (containsKey(key)) {
          // get the value out to send to the notifier
-         Element e = cache.get(key);
-         final Object payload = e.getObjectValue();
+         final Object payload = getCachePayload(key);
 
          // remove the entry
          cache.remove(key);
@@ -208,9 +230,6 @@ public class MemCache implements Cache {
    public String getDescription() {
       final StringBuilder buf = new StringBuilder();
       buf.append("MemCache");
-      if (m_disabled) {
-         buf.append(" disabled");
-      }
 
       // TODO remove this part -AZ
       if (m_resourcePattern != null) {
@@ -271,10 +290,9 @@ public class MemCache implements Cache {
    public MemCache(BasicMemoryService memoryService,
          EventTrackingService eventTrackingService, Ehcache cache)
    {
-      // inject our dependencies
-//      m_memoryService = memoryService;
+      this(cache, null, null);
+      log.warn("deprecated MemCache constructor, do not use");
       m_eventTrackingService = eventTrackingService;
-      this.cache = cache;
    }
 
    /**
@@ -290,13 +308,10 @@ public class MemCache implements Cache {
          EventTrackingService eventTrackingService,
          CacheRefresher refresher, String pattern, Ehcache cache)
    {
-      this(memoryService, eventTrackingService, cache);
-      log.warn("deprecated method, do not use");
+      this(cache, refresher, null);
+      log.warn("deprecated MemCache constructor, do not use");
+      m_eventTrackingService = eventTrackingService;
       m_resourcePattern = pattern;
-      if (refresher != null)
-      {
-         m_refresher = refresher;
-      }
 
       // register to get events - first, before others
 //      if (pattern != null)
@@ -318,12 +333,9 @@ public class MemCache implements Cache {
          EventTrackingService eventTrackingService,
          CacheRefresher refresher, long sleep, Ehcache cache)
    {
-      this(memoryService, eventTrackingService, cache);
-      log.warn("deprecated method, do not use");
-      if (refresher != null)
-      {
-         m_refresher = refresher;
-      }
+      this(cache, refresher, null);
+      log.warn("deprecated MemCache constructor, do not use");
+      m_eventTrackingService = eventTrackingService;
    }
 
    /**
@@ -337,12 +349,9 @@ public class MemCache implements Cache {
          EventTrackingService eventTrackingService,
          CacheRefresher refresher, Ehcache cache)
    {
-      this(memoryService, eventTrackingService, cache);
-      log.warn("deprecated method, do not use");
-      if (refresher != null)
-      {
-         m_refresher = refresher;
-      }
+      this(cache, refresher, null);
+      log.warn("deprecated MemCache constructor, do not use");
+      m_eventTrackingService = eventTrackingService;
    }
 
    /**
@@ -358,8 +367,10 @@ public class MemCache implements Cache {
          EventTrackingService eventTrackingService, long sleep,
          String pattern, Ehcache cache)
    {
-      this(memoryService, eventTrackingService, pattern, cache);
-      log.warn("deprecated method, do not use");
+      this(cache, null, null);
+      log.warn("deprecated MemCache constructor, do not use");
+      m_eventTrackingService = eventTrackingService;
+      m_resourcePattern = pattern;
    }
 
    /**
@@ -378,12 +389,6 @@ public class MemCache implements Cache {
       this(memoryService, eventTrackingService, cache);
       log.warn("deprecated method, do not use");
       m_resourcePattern = pattern;
-
-      // register to get events - first, before others
-//      if (pattern != null)
-//      {
-//         m_eventTrackingService.addPriorityObserver(this);
-//      }
    }
 
    
@@ -401,7 +406,7 @@ public class MemCache implements Cache {
     */
    public void put(String key, Object payload, int duration)
    {
-      log.warn("deprecated method, do not use");
+      log.warn("deprecated method, do not use: put(String key, Object payload, int duration)");
       put(key, payload);
    }
 
@@ -424,7 +429,7 @@ public class MemCache implements Cache {
     */
    public void expire(String key)
    {
-      log.warn("deprecated method, do not use");
+      log.warn("deprecated method, do not use: expire(String key)");
       // remove it
       remove(key);
 
@@ -498,7 +503,7 @@ public class MemCache implements Cache {
 
    public List getKeys()
    {
-      log.warn("deprecated method, do not use");
+      log.warn("deprecated method, do not use: getKeys()");
       return cache.getKeys();
 
    } // getKeys
@@ -555,7 +560,7 @@ public class MemCache implements Cache {
    public boolean disabled()
    {
       // never disabled anymore
-      log.warn("deprecated method, do not use");
+      log.warn("deprecated method, do not use: disabled()");
       return false;
 
    } // disabled
@@ -608,6 +613,8 @@ public class MemCache implements Cache {
     */
    public void update(Observable o, Object arg)
    {
+      log.warn("deprecated method, do not use: update(Observable o, Object arg)");
+
       if (disabled()) return;
 
       // arg is Event
@@ -642,6 +649,8 @@ public class MemCache implements Cache {
     */
    protected void continueUpdate(Event event)
    {
+      log.warn("deprecated method, do not use: continueUpdate(Event event)");
+
       String key = event.getResource();
 
       if (log.isDebugEnabled())
@@ -715,6 +724,7 @@ public class MemCache implements Cache {
     */
    protected String referencePath(String ref)
    {
+      log.warn("deprecated method, do not use: referencePath(String ref)");
       String path = null;
 
       // Note: there may be a trailing separator
@@ -759,6 +769,8 @@ public class MemCache implements Cache {
       {
          // put the payload into the soft reference
          super(payload);
+         log.warn("deprecated CacheEntry constructor, do not use");
+
 
          // is it supposed to be null?
          m_nullPayload = (payload == null);
@@ -775,6 +787,8 @@ public class MemCache implements Cache {
        */
       public Object getPayload(String key)
       {
+         log.warn("deprecated CacheEntry method, do not use: getPayload(String key)");
+
          // if we hold null, this is easy
          if (m_nullPayload)
          {

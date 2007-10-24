@@ -102,12 +102,12 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
       if (cacheManager == null)
          throw new IllegalStateException("CacheManager was not injected properly!");
 
-//      try {
-//          get notified of events to watch for a reset
-//          eventTrackingService().addObserver(this); // No longer using event tracking with cache
-//      } catch (Throwable t) {
-//         M_log.warn("init(): ", t);
-//      }
+//    try {
+//    get notified of events to watch for a reset
+//    eventTrackingService().addObserver(this); // No longer using event tracking with cache
+//    } catch (Throwable t) {
+//    M_log.warn("init(): ", t);
+//    }
    } // init
 
    /**
@@ -188,7 +188,7 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
       M_log.warn("boolean distributed, boolean replicated not being handled yet");
       Cache c = cachesRecord.get(cacheName);
       if (c == null) {
-         c = new MemCache(instantiateCache(cacheName, true), refresher, notifer);
+         c = new MemCache(instantiateCache(cacheName), refresher, notifer);
       }
       cachesRecord.put(cacheName, c);
       return c;
@@ -253,54 +253,43 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
    } // doReset
 
    /**
-    * Create a cache or get the cache out of ComponentManager
+    * Create a cache using the supplied name (with default settings) 
+    * or get the cache out of spring or the current configured cache
+    * Will proceed in this order:
+    * 1) Attempt to load a bean with the name of the cache
+    * 2) Attempt to load cache from caching system
+    * 3) Create a new cache by this name
     * 
-    * @param cacheName
-    * @param legacyMode
-    *           If true always create a new Cache. If false, cache must be defined in bean factory.
+    * @param cacheName the name of the cache
     * @return a cache instance
     */
-   private Ehcache instantiateCache(String cacheName, boolean legacyMode) {
+   private Ehcache instantiateCache(String cacheName) {
       if (M_log.isDebugEnabled())
          M_log.debug("createNewCache(String " + cacheName + ")");
 
-      String name = cacheName;
-      if (name == null || "".equals(name)) {
+      if (cacheName == null || "".equals(cacheName)) {
          throw new IllegalArgumentException("String cacheName must not be null or empty!");
       }
 
       // try to locate a named cache in the bean factory
       Ehcache cache = null;
       try {
-         cache = (Ehcache) applicationContext.getBean(name);
+         cache = (Ehcache) applicationContext.getBean(cacheName);
       } catch (BeansException e) {
          M_log.debug("Error occurred when trying to load cache from bean factory!", e);
-         cache = null;
       }
 
       // try to locate the cache in the cacheManager by name
-      if (cache == null && cacheManager.cacheExists(name)) {
-         // if this cache name is already in use but is not loaded from spring
-         // then we have to assume this is a mistake -AZ
-         throw new IllegalArgumentException("Tried to create a new cache with a name that is already used: " + name);
-      }
-
-      if (cache != null) {
-         // found the cache
-         M_log.info("Loaded Named Cache: " + cache);
-         return cache;
-      } else {
-         // did not find the cache
-         if (legacyMode) {
-            cacheManager.addCache(name); // create a new cache
-            cache = cacheManager.getEhcache(name);
-            M_log.info("Loaded newly created Cache (from default): " + cache);
-         } else {
-            throw new IllegalStateException("Could not find named cache in the bean factory (and will not create one): " + name);
+      if (cache == null) {
+         // if this cache name is created or already in use then we just get it
+         if (!cacheManager.cacheExists(cacheName)) {
+            // did not find the cache
+            cacheManager.addCache(cacheName); // create a new cache
+            M_log.info("Created new Cache (from default settings): " + cache);
          }
-
-         return cache;
+         cache = cacheManager.getEhcache(cacheName);
       }
+      return cache;
    }
 
    public void destroyCache(String cacheName) {
@@ -328,8 +317,8 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
     */
    public Cache newCache(String cacheName, CacheRefresher refresher, String pattern) {
       M_log.warn("deprecated method, do NOT use");
-      return new MemCache(this, eventTrackingService, refresher, pattern, instantiateCache(
-            cacheName, true));
+      return newCache(cacheName, refresher, null, true, false);
+//      return new MemCache(this, eventTrackingService, refresher, pattern, instantiateCache(cacheName));
    }
 
    /**
@@ -338,9 +327,11 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
     * @deprecated no longer supported (used by SecurityService impl which is SakaiSecurity)
     */
    public MultiRefCache newMultiRefCache(String cacheName) {
-      M_log.warn("deprecated method, do NOT use");
-      return new MultiRefCacheImpl(this, eventTrackingService, instantiateCache(cacheName, true),
-            instantiateCache(ORG_SAKAIPROJECT_MEMORY_MEMORY_SERVICE_MREF_MAP, false));
+      M_log.warn("deprecated method, do NOT use: newMultiRefCache(String cacheName)");
+      return new MultiRefCacheImpl(this, 
+            eventTrackingService, 
+            instantiateCache(cacheName),
+            instantiateCache(ORG_SAKAIPROJECT_MEMORY_MEMORY_SERVICE_MREF_MAP));
    }
 
    /**
@@ -349,7 +340,9 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
     * @deprecated no longer supported
     */
    public Cache newCache(String cacheName, String pattern) {
-      return new MemCache(this, eventTrackingService, pattern, instantiateCache(cacheName, true));
+      M_log.warn("deprecated method, do NOT use: newCache(String cacheName, String pattern)");
+      return newCache(cacheName, null, null, true, false);
+//      return new MemCache(this, eventTrackingService, pattern, instantiateCache(cacheName));
    }
 
    /**
@@ -359,7 +352,7 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
     */
    synchronized public void registerCacher(Cacher cacher) {
       // not needed with ehcache
-      M_log.warn("deprecated method that does nothing");
+      M_log.warn("deprecated method that does nothing: registerCacher(Cacher cacher)");
 
    } // registerCacher
 
@@ -370,7 +363,7 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
     */
    synchronized public void unregisterCacher(Cacher cacher) {
       // not needed with ehcache
-      M_log.warn("deprecated method that does nothing");
+      M_log.warn("deprecated method that does nothing: unregisterCacher(Cacher cacher)");
 
    } // unregisterCacher
 
@@ -382,8 +375,8 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
    public Cache newCache(CacheRefresher refresher, String pattern) {
       M_log.warn("deprecated method, do NOT use");
       throw new UnsupportedOperationException("deprecated method, no longer functional");
-//      return new MemCache(this, eventTrackingService, refresher, pattern, instantiateCache(
-//            "MemCache", true));
+//    return new MemCache(this, eventTrackingService, refresher, pattern, instantiateCache(
+//    "MemCache", true));
    }
 
    /**
@@ -418,8 +411,8 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
    public Cache newCache(CacheRefresher refresher, long sleep) {
       M_log.warn("deprecated method, do NOT use");
       throw new UnsupportedOperationException("deprecated method, no longer functional");
-//      return new MemCache(this, eventTrackingService, refresher, sleep, instantiateCache(
-//            "MemCache", true));
+//    return new MemCache(this, eventTrackingService, refresher, sleep, instantiateCache(
+//    "MemCache", true));
    }
 
    /**
@@ -442,7 +435,7 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
    public Cache newCache() {
       M_log.warn("deprecated method, do NOT use");
       throw new UnsupportedOperationException("deprecated method, no longer functional");
-//      return new MemCache(instantiateCache("MemCache", true), null, null);
+//    return new MemCache(instantiateCache("MemCache", true), null, null);
    }
 
    /**
