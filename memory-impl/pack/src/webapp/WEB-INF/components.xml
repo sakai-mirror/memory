@@ -4,10 +4,9 @@
 <beans>
 
    <!-- This bean is the heart and soul of this project and the only access point 
-        that should be used from outside it -->
+      that should be used from outside it -->
    <bean id="org.sakaiproject.memory.api.MemoryService"
-      class="org.sakaiproject.memory.impl.BasicMemoryService" 
-      init-method="init"
+      class="org.sakaiproject.memory.impl.BasicMemoryService" init-method="init"
       destroy-method="destroy">
       <property name="cacheManager" ref="org.sakaiproject.memory.api.MemoryService.cacheManager" />
       <property name="securityService" ref="org.sakaiproject.authz.api.SecurityService.LAZY" />
@@ -40,6 +39,6 @@
       </property>
    </bean>
 
-   <import resource="ehcache-beans.xml"/>
+   <import resource="ehcache-beans.xml" />
 
 </beans>
