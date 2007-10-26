@@ -105,7 +105,7 @@
       </dependency>
 
       <dependency>
-         <groupId>sakaiproject</groupId>
+         <groupId>org.sakaiproject</groupId>
          <artifactId>sakai-testrunner-logic-api</artifactId>
          <version>${sakai.version}</version>
       </dependency>

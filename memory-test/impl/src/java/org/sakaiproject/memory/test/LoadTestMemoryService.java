@@ -8,8 +8,10 @@ import java.text.DecimalFormat;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.sakaiproject.entitybrokertest.logic.impl.test.LoadTestUserEntity;
+
 import org.sakaiproject.memory.api.MemoryService;
+import org.sakaiproject.testrunner.utils.SpringTestCase;
+import org.sakaiproject.testrunner.utils.annotations.Autowired;
 import org.sakaiproject.tool.api.Session;
 import org.sakaiproject.tool.api.SessionManager;
 import org.sakaiproject.user.api.User;
@@ -29,21 +31,33 @@ import org.sakaiproject.user.api.UserPermissionException;
  */
 public class LoadTestMemoryService extends SpringTestCase {
 
-      private static Log log = LogFactory.getLog(LoadTestUserEntity.class);
+      private static Log log = LogFactory.getLog(LoadTestMemoryService.class);
 
       private MemoryService memoryService;
-      private UserDirectoryService userDirectoryService;
+      @Autowired
+      public void setMemoryService(MemoryService memoryService) {
+         this.memoryService = memoryService;
+      }
+
       private SessionManager sessionManager;
+      @Autowired
+      public void setSessionManager(SessionManager sessionManager) {
+         this.sessionManager = sessionManager;
+      }
+
+      private UserDirectoryService userDirectoryService;
+      @Autowired
+      public void setUserDirectoryService(UserDirectoryService userDirectoryService) {
+         this.userDirectoryService = userDirectoryService;
+      }
+      
 
       @Override
       protected void setUp() throws Exception {
          super.setUp();
-         memoryService = getSpringBean(MemoryService.class);
-         userDirectoryService = getSpringBean(UserDirectoryService.class);
-         sessionManager = getSpringBean(SessionManager.class);
       };
 
-      public void testCanGetSakaiBean() {
+      public void testCanGetSakaiBeans() {
          assertNotNull(memoryService);
          assertNotNull(userDirectoryService);
          assertNotNull(sessionManager);

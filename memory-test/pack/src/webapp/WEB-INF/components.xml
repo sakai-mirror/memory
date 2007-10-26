@@ -3,9 +3,13 @@
 
 <beans>
 
-   <!-- testing beans -->
-   <bean class="org.sakaiproject.testrunner.util.TestExecutor" init-method="executeTests">
-      <property name="testClassname" value="org.sakaiproject.entitybrokertest.logic.impl.test.LoadTestUserEntity" />
+   <!-- test registering and running beans -->
+   <bean class="org.sakaiproject.testrunner.util.TestExecutor">
+      <property name="testClassname"
+         value="org.sakaiproject.memory.test.LoadTestMemoryService" />
+      <property name="testType" value="testrunner.load" />
+      <property name="registerTest" value="true" />
+      <property name="testDelaySeconds" value="35" />
    </bean>
 
 </beans>

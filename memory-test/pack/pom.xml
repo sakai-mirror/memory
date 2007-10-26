@@ -33,7 +33,7 @@
       </dependency>
 
       <dependency>
-         <groupId>sakaiproject</groupId>
+         <groupId>org.sakaiproject</groupId>
          <artifactId>sakai-testexecutor</artifactId>
          <version>1.0</version>
          <scope>runtime</scope>
