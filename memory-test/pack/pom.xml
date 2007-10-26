@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
    <modelVersion>4.0.0</modelVersion>
    <name>sakai-memory-test-pack</name>
@@ -18,7 +18,7 @@
    </properties>
 
    <parent>
-      <artifactId>memory-test-base</artifactId>
+      <artifactId>sakai-memory-test</artifactId>
       <groupId>org.sakaiproject</groupId>
       <version>M2</version>
       <relativePath>../pom.xml</relativePath>
@@ -28,10 +28,11 @@
 
       <dependency>
          <groupId>org.sakaiproject</groupId>
-         <artifactId>sakai-memory-test</artifactId>
+         <artifactId>sakai-memory-test-impl</artifactId>
          <version>${sakai.version}</version>
       </dependency>
 
+      <!-- test runner -->
       <dependency>
          <groupId>org.sakaiproject</groupId>
          <artifactId>sakai-testexecutor</artifactId>

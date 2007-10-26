@@ -12,6 +12,7 @@ import org.apache.commons.logging.LogFactory;
 import org.sakaiproject.memory.api.MemoryService;
 import org.sakaiproject.testrunner.utils.SpringTestCase;
 import org.sakaiproject.testrunner.utils.annotations.Autowired;
+import org.sakaiproject.testrunner.utils.annotations.Resource;
 import org.sakaiproject.tool.api.Session;
 import org.sakaiproject.tool.api.SessionManager;
 import org.sakaiproject.user.api.User;
@@ -40,7 +41,7 @@ public class LoadTestMemoryService extends SpringTestCase {
       }
 
       private SessionManager sessionManager;
-      @Autowired
+      @Resource(name="org.sakaiproject.tool.api.SessionManager")
       public void setSessionManager(SessionManager sessionManager) {
          this.sessionManager = sessionManager;
       }

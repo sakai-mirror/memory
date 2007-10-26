@@ -9,7 +9,7 @@
          value="org.sakaiproject.memory.test.LoadTestMemoryService" />
       <property name="testType" value="testrunner.load" />
       <property name="registerTest" value="true" />
-      <property name="testDelaySeconds" value="35" />
+      <property name="testDelaySeconds" value="30" />
    </bean>
 
 </beans>
