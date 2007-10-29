@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import net.sf.ehcache.Ehcache;
+import net.sf.ehcache.Statistics;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -168,14 +169,19 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
    protected static String generateCacheStats(Ehcache cache) {
       StringBuilder sb = new StringBuilder();
       sb.append(cache.getName() + ":");
-      final long hits = cache.getStatistics().getCacheHits();
-      final long misses = cache.getStatistics().getCacheMisses();
+      // this will make this costly but it is important to get accurate settings
+      cache.setStatisticsAccuracy(Statistics.STATISTICS_ACCURACY_GUARANTEED);
+      Statistics stats = cache.getStatistics();
+      final long memSize = cache.getMemoryStoreSize();
+      final long diskSize = cache.getDiskStoreSize();
+      final long size = memSize + diskSize;
+      final long hits = stats.getCacheHits();
+      final long misses = stats.getCacheMisses();
       final String hitPercentage = ((hits+misses) > 0) ? ((100l * hits) / (hits + misses)) + "%" : "N/A";
       final String missPercentage = ((hits+misses) > 0) ? ((100l * misses) / (hits + misses)) + "%" : "N/A";
-      sb.append("  Size: " + cache.getSize() + " [memory:" + cache.getMemoryStoreSize() + 
-            ", disk:" + cache.getDiskStoreSize() + "]");
-      sb.append(",  Hits: " + hits + " [memory:" + cache.getStatistics().getInMemoryHits() + 
-            ", disk:" + cache.getStatistics().getOnDiskHits() + "] (" + hitPercentage + ")");
+      sb.append("  Size: " + size + " [memory:" + memSize + ", disk:" + diskSize + "]");
+      sb.append(",  Hits: " + hits + " [memory:" + stats.getInMemoryHits() + 
+            ", disk:" + stats.getOnDiskHits() + "] (" + hitPercentage + ")");
       sb.append(",  Misses: " + misses + " (" + missPercentage + ")");
       return sb.toString();
    }
@@ -276,7 +282,7 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
     */
    private Ehcache instantiateCache(String cacheName) {
       if (M_log.isDebugEnabled())
-         M_log.debug("createNewCache(String " + cacheName + ")");
+         M_log.debug("instantiateCache(String " + cacheName + ")");
 
       if (cacheName == null || "".equals(cacheName)) {
          throw new IllegalArgumentException("String cacheName must not be null or empty!");
@@ -296,10 +302,12 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
          if (!cacheManager.cacheExists(cacheName)) {
             // did not find the cache
             cacheManager.addCache(cacheName); // create a new cache
-            M_log.info("Created new Cache (from default settings): " + cache);
+            M_log.info("Created new Cache (from default settings): " + cacheName);
          }
          cache = cacheManager.getEhcache(cacheName);
       }
+      if (M_log.isDebugEnabled())
+         M_log.debug(cacheName + " settings: " + cache);
       return cache;
    }
 
