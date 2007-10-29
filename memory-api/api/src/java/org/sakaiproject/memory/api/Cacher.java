@@ -35,14 +35,16 @@ public interface Cacher {
 	void resetCache();
 
 	/**
-	 * Return the size of this cache
+	 * Return the size of this cache<br/>
+	 * <b>NOTE:</b> This is approximate and may not be completely accurate
 	 * 
 	 * @return the number of items in this cache
 	 */
 	long getSize();
 
 	/**
-	 * Return a description of this cache
+	 * Return a description of this cache<br/>
+	 * <b>WARNING:</b> This is costly and should not be called often
 	 * 
 	 * @return a string which summarizes the state of the cache
 	 */

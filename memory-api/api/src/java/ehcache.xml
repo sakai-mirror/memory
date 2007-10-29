@@ -75,6 +75,7 @@
     policy is Least Recently Used (specified as LRU). Other policies available -
     First In First Out (specified as FIFO) and Less Frequently Used
     (specified as LFU)
+    *NOTE: LFU seems to have some possible issues -AZ
 
     Cache elements can also contain sub elements which take the same format of a factory class
     and properties. Defined sub-elements are:
@@ -175,16 +176,16 @@
     The defaultCache has an implicit name "default" which is a reserved cache name.
     -->
     <defaultCache
-         maxElementsInMemory="10000"
+         maxElementsInMemory="3000"
          eternal="false"
-         timeToIdleSeconds="120"
-         timeToLiveSeconds="180"
+         timeToIdleSeconds="600"
+         timeToLiveSeconds="1200"
          overflowToDisk="true"
          diskSpoolBufferSizeMB="30"
-         maxElementsOnDisk="100000"
+         maxElementsOnDisk="10000"
          diskPersistent="false"
          diskExpiryThreadIntervalSeconds="120"
-         memoryStoreEvictionPolicy="LFU">
+         memoryStoreEvictionPolicy="LRU">
      </defaultCache>
 
 
@@ -211,6 +212,33 @@
 
         -->
 
+    <!-- CACHES FOR TESTING -->
+    <cache name="org.sakaiproject.memory.cache.MemOnly"
+         maxElementsInMemory="10000"
+         eternal="false"
+         timeToIdleSeconds="600"
+         timeToLiveSeconds="1200"
+         overflowToDisk="false"
+         diskSpoolBufferSizeMB="0"
+         maxElementsOnDisk="0"
+         diskPersistent="false"
+         diskExpiryThreadIntervalSeconds="120"
+         memoryStoreEvictionPolicy="LRU">
+     </cache>
+
+    <cache name="org.sakaiproject.memory.cache.DiskOnly"
+         maxElementsInMemory="1"
+         eternal="false"
+         timeToIdleSeconds="600"
+         timeToLiveSeconds="1200"
+         overflowToDisk="true"
+         diskSpoolBufferSizeMB="30"
+         maxElementsOnDisk="10000"
+         diskPersistent="false"
+         diskExpiryThreadIntervalSeconds="120"
+         memoryStoreEvictionPolicy="LRU">
+     </cache>
+
    <!-- Place configuration for your caches following -->
 
    <!-- this cache tracks the timestamps of the most recent updates to particular tables. 
@@ -226,15 +254,15 @@
     <cache name="org.hibernate.cache.StandardQueryCache"
       maxElementsInMemory="12000"
       eternal="false"
-      timeToIdleSeconds="300"
-      timeToLiveSeconds="600"
+      timeToIdleSeconds="600"
+      timeToLiveSeconds="1200"
       overflowToDisk="false" />
 
    <!-- this cache holds retrieved data about users -->
    <cache name="org.sakaiproject.user.api.UserDirectoryService"
          maxElementsInMemory="25000"
          eternal="false"
-         timeToIdleSeconds="7200"
+         timeToIdleSeconds="3600"
          timeToLiveSeconds="7200"
          memoryStoreEvictionPolicy="LFU"
          overflowToDisk="true"
@@ -254,8 +282,7 @@
          diskSpoolBufferSizeMB="30"
          maxElementsOnDisk="100000"
          diskPersistent="false"
-         diskExpiryThreadIntervalSeconds="120"
-         memoryStoreEvictionPolicy="LFU">
+         diskExpiryThreadIntervalSeconds="120">
    </cache>
 
    <!-- replacement for the multiref cache reference holder,
@@ -266,7 +293,6 @@
          eternal="true"
          timeToIdleSeconds="1000"
          timeToLiveSeconds="1000"
-         memoryStoreEvictionPolicy="LFU"
          overflowToDisk="true"
          diskSpoolBufferSizeMB="30"
          maxElementsOnDisk="200000"
@@ -297,8 +323,7 @@
          diskSpoolBufferSizeMB="30"
          maxElementsOnDisk="100000"
          diskPersistent="true"
-         diskExpiryThreadIntervalSeconds="120"
-         memoryStoreEvictionPolicy="LFU">
+         diskExpiryThreadIntervalSeconds="120">
          <cacheEventListenerFactory class="net.sf.ehcache.distribution.RMICacheReplicatorFactory" 
             properties="replicateAsynchronously=true, 
                replicatePuts=true, 
