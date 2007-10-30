@@ -92,61 +92,77 @@ public class LoadTestMemoryService extends SpringTestCase {
       final int accessMultiplier = 100; // this is the number of times each item will be retrieved
 
       log.info("LOAD testing DEFAULT (MEM + DISK) cache (items="+itemCount+", accessMultiplier="+accessMultiplier+")");
-      runBasicLoadTest("AZ-default-cache-basic", itemCount, accessMultiplier);
+      runBasicLoadTest("AZ-BASIC-LOAD", itemCount, accessMultiplier);
 
    }
 
    /**
     * Simulating load against a cache (single threaded)
-    * Simulates many inserts with minimal removes and massive reads (including many misses)
+    * Simulates many inserts with minimal removes and massive reads (including some misses)
     */
    public void testSimulatedSingleCache() {
-      final int iterations = 100000;
-      Map<String, Long> results = new HashMap<String, Long>();
+      final int iterations = 1000000;
 
       // generate a test cache
       Cache testCache = memoryService.newCache("AZ-SINGLE-SIMULATION");
       testCache.resetCache();
 
-      long start = 0;
-      long total = 0;
+      int threadnum = 0;
+      long maxCacheSize = 10000;
+
+      runCacheTestThread(threadnum, testCache, iterations, maxCacheSize);
+   }
+
+   /**
+    * @param threadnum
+    * @param testCache
+    * @param iterations
+    * @param maxCacheSize
+    */
+   private void runCacheTestThread(int threadnum, Cache testCache, final int iterations,
+         long maxCacheSize) {
       long missCount = 0;
       long hitCount = 0;
       long readCount = 0;
-      long insertCount = 0;
-      long deleteCount = 0;
-      int threadnum = 0;
+      int insertCount = 0;
+      int deleteCount = 0;
       Random rGen = new Random();
       String keyPrefix = "key-" + threadnum + "-";
-      start = System.currentTimeMillis();
+      long start = System.currentTimeMillis();
       for (int i = 0; i < iterations; i++) {
-         if (i < 100 || (i % 10) == 0 ) {
-            long num = insertCount++;
+         int random = rGen.nextInt(100);
+         if ( (i < 1000 || random >= 95) && (insertCount < maxCacheSize) ) {
+            int num = insertCount++;
             testCache.put(keyPrefix + num, "Number=" + num + ": " + testPayload);
          }
-         if (i > 0) {
+         if (i > 2) {
             for (int j = 0; j < 10; j++) {
                readCount++;
-               if (testCache.get(keyPrefix + rGen.nextInt(i)) == null) {
+               if (testCache.get(keyPrefix + rGen.nextInt(insertCount)) == null) {
                   missCount++;
                } else {
                   hitCount++;
                }
             }
          }
-         if (i % 30 == 0) {
-            testCache.remove(keyPrefix + rGen.nextInt(i));
+         if ( random < 1 && (deleteCount < (maxCacheSize/8)) ) {
+            testCache.remove(keyPrefix + rGen.nextInt(insertCount));
             deleteCount++;
          }
+         if (i > 0 && i % (iterations/10) == 0) {
+            log.info("thread: " + threadnum + " " + (i*100/iterations) + "% complete");
+         }
       }
-      total = System.currentTimeMillis() - start;
+      long total = System.currentTimeMillis() - start;
+      final String hitPercentage = ((hitCount+missCount) > 0) ? ((100l * hitCount) / (hitCount + missCount)) + "%" : "N/A";
       log.info("Completed "+iterations+" iterations with "+insertCount+" inserts " +
       		"and "+deleteCount+" removes and "+readCount+" reads " +
-      		"in "+total+" ms ("+calcUSecsPerOp(iterations, total)+" microsecs per iteration)," +
-            " Cache hits: " + hitCount + ", misses: " + missCount);
+      		"(hits: " + hitCount + ", misses: " + missCount + ", hit%: "+hitPercentage+") " +
+      		"in "+total+" ms ("+calcUSecsPerOp(iterations, total)+" microsecs per iteration)");
       log.info("STATS: " + testCache.getDescription());
    }
-   
+
+/**
    public void testConcurrentMemoryServiceDefaultCache() {
       final int threads = 50;
       final int iterations = 100;
@@ -189,7 +205,7 @@ public class LoadTestMemoryService extends SpringTestCase {
       }
       startThreadMonitor();
    }
-
+**/
 
 
 /**
