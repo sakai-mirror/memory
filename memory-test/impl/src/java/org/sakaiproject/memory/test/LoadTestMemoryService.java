@@ -54,6 +54,16 @@ public class LoadTestMemoryService extends SpringTestCase {
       this.userDirectoryService = userDirectoryService;
    }
 
+
+   /**
+    * Number of total thread simulation iterations to run
+    */
+   protected final int iterations = 1000000;
+   /**
+    * This is the maxsize of the cache being tested
+    */
+   protected final long maxCacheSize = 10000;
+
    protected DecimalFormat df = new DecimalFormat("#,##0.00");
    protected final String testPayload = 
       "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" +
@@ -101,25 +111,51 @@ public class LoadTestMemoryService extends SpringTestCase {
     * Simulates many inserts with minimal removes and massive reads (including some misses)
     */
    public void testSimulatedSingleCache() {
-      final int iterations = 1000000;
 
       // generate a test cache
       Cache testCache = memoryService.newCache("AZ-SINGLE-SIMULATION");
       testCache.resetCache();
 
-      int threadnum = 0;
-      long maxCacheSize = 10000;
-
-      runCacheTestThread(threadnum, testCache, iterations, maxCacheSize);
+      runCacheTestThread(1, 1, testCache, iterations, maxCacheSize);
+      log.info("STATS: " + testCache.getDescription());
    }
+
+
+   public void testConcurrentMemoryServiceDefaultCache() {
+      final int threads = 30;
+      final int threadIterations = iterations / threads;
+
+      // generate a test cache
+      final Cache testCache = memoryService.newCache("AZ-MULTITHREAD-SIMULATION");
+      testCache.resetCache();
+
+      log.info("Starting concurrent caching load test with "+threads+" threads...");
+      long start = System.currentTimeMillis();
+      for (int t = 0; t < threads; t++) {
+         final int threadnum = t+1;
+         Thread thread = new Thread( new Runnable() {
+            public void run() {
+               runCacheTestThread(threadnum, threads, testCache, threadIterations, maxCacheSize);
+            }
+         }, threadnum+"");
+         thread.start();
+      }
+      startThreadMonitor();
+      long total = System.currentTimeMillis() - start;
+      log.info(threads + " threads completed "+iterations+" iterations in "
+            +total+" ms ("+calcUSecsPerOp(iterations, total)+" microsecs per iteration)");
+      log.info("STATS: " + testCache.getDescription());
+   }
+
 
    /**
     * @param threadnum
+    * @param threads
     * @param testCache
     * @param iterations
     * @param maxCacheSize
     */
-   private void runCacheTestThread(int threadnum, Cache testCache, final int iterations,
+   private void runCacheTestThread(int threadnum, int threads, Cache testCache, final int iterations,
          long maxCacheSize) {
       long missCount = 0;
       long hitCount = 0;
@@ -128,14 +164,16 @@ public class LoadTestMemoryService extends SpringTestCase {
       int deleteCount = 0;
       Random rGen = new Random();
       String keyPrefix = "key-" + threadnum + "-";
+      checkpointMap.put(Thread.currentThread().getName(), new Date());
       long start = System.currentTimeMillis();
       for (int i = 0; i < iterations; i++) {
          int random = rGen.nextInt(100);
-         if ( (i < 1000 || random >= 95) && (insertCount < maxCacheSize) ) {
+         if ( (i < 100 || random >= 95) && ((insertCount*threads) < maxCacheSize) ) {
             int num = insertCount++;
             testCache.put(keyPrefix + num, "Number=" + num + ": " + testPayload);
          }
          if (i > 2) {
+            // do 10 reads from this threads cache
             for (int j = 0; j < 10; j++) {
                readCount++;
                if (testCache.get(keyPrefix + rGen.nextInt(insertCount)) == null) {
@@ -144,68 +182,35 @@ public class LoadTestMemoryService extends SpringTestCase {
                   hitCount++;
                }
             }
+            // do 5 more from a random threads cache
+            String otherKeyPrefix = "key-" + (rGen.nextInt(threads)+1) + "-";
+            for (int j = 0; j < 5; j++) {
+               readCount++;
+               if (testCache.get(otherKeyPrefix + rGen.nextInt(insertCount)) == null) {
+                  missCount++;
+               } else {
+                  hitCount++;
+               }
+            }
          }
-         if ( random < 1 && (deleteCount < (maxCacheSize/8)) ) {
+         if ( random < 1 && ((deleteCount*threads) < (maxCacheSize/8)) ) {
             testCache.remove(keyPrefix + rGen.nextInt(insertCount));
             deleteCount++;
          }
-         if (i > 0 && i % (iterations/10) == 0) {
-            log.info("thread: " + threadnum + " " + (i*100/iterations) + "% complete");
+         if (i > 0 && i % (iterations/5) == 0) {
+            checkpointMap.put(Thread.currentThread().getName(), new Date());
+            //log.info("thread: " + threadnum + " " + (i*100/iterations) + "% complete");
          }
       }
       long total = System.currentTimeMillis() - start;
+      checkpointMap.remove(Thread.currentThread().getName());
       final String hitPercentage = ((hitCount+missCount) > 0) ? ((100l * hitCount) / (hitCount + missCount)) + "%" : "N/A";
-      log.info("Completed "+iterations+" iterations with "+insertCount+" inserts " +
+      log.info("Thread "+threadnum+": completed "+iterations+" iterations with "+insertCount+" inserts " +
       		"and "+deleteCount+" removes and "+readCount+" reads " +
       		"(hits: " + hitCount + ", misses: " + missCount + ", hit%: "+hitPercentage+") " +
       		"in "+total+" ms ("+calcUSecsPerOp(iterations, total)+" microsecs per iteration)");
-      log.info("STATS: " + testCache.getDescription());
    }
 
-/**
-   public void testConcurrentMemoryServiceDefaultCache() {
-      final int threads = 50;
-      final int iterations = 100;
-
-      log.info("Starting concurrent load test...");
-      for (int t = 0; t < threads; t++) {
-         final int threadnum = t+1;
-         Thread thread = new Thread( new Runnable() {
-            public void run() {
-               checkpointMap.put(Thread.currentThread().getName(), new Date());
-
-               log.info("test thread: " + threadnum + " started");
-               //checkpointMap.put(Thread.currentThread().getName(), new Date());
-               long readCount = 0;
-               long insertCount = 0;
-               long deleteCount = 0;
-               Random rGen = new Random();
-               deleteCount++;
-               String name = "thing-" + threadnum + "-";
-               for (int i = 0; i < iterations; i++) {
-                  checkpointMap.put(Thread.currentThread().getName(), new Date());
-                  insertCount++;
-                  if (i > 0) {
-                     for (int j = 0; j < 10; j++) {
-                        readCount++;
-                     }
-                  }
-                  if (i % 5 == 0) {
-                     deleteCount++;
-                  }
-                  if (i % 10 == 0) {
-                     log.info("thread: " + threadnum + " " + (i*100/iterations) + "% complete");
-                  }
-               }
-               log.info("test thread: " + threadnum + " complete: reads="+readCount+", inserts="+insertCount+", deletes="+deleteCount);
-               checkpointMap.remove(Thread.currentThread().getName()); // clear map entry
-            }
-         }, threadnum+"");
-         thread.start();
-      }
-      startThreadMonitor();
-   }
-**/
 
 
 /**
@@ -415,55 +420,56 @@ public class LoadTestMemoryService extends SpringTestCase {
    }
 
    /**
-    * Starts up a thread that monitors the other test threads
+    * Monitor the other test threads and block this test from completing until all test threads complete
     */
    private void startThreadMonitor() {
-      // thread to monitor the other threads
-      new Thread( new Runnable() {
-         public void run() {
-            Map<String, Date> m = new HashMap<String, Date>();
-            log.info("Starting up monitoring of test threads...");
+      // monitor the other running threads
+      Map<String, Date> m = new HashMap<String, Date>();
+      log.info("Starting up monitoring of test threads...");
+      try {
+         Thread.sleep(3 * 1000);
+      } catch (InterruptedException e) {
+         e.printStackTrace();
+      }
 
-            while (true) {
-               if (checkpointMap.size() == 0) {
-                  log.info("All test threads complete... monitoring exiting");
-                  break;
-               }
-               int deadlocks = 0;
-               List<String> stalledThreads = new ArrayList<String>();
-               for (String key : checkpointMap.keySet()) {
-                  if (m.containsKey(key)) {
-                     if (m.get(key).equals(checkpointMap.get(key))) {
-                        double stallTime = (new Date().getTime() - checkpointMap.get(key).getTime()) / 1000.0d;
-                        stalledThreads.add(df.format(stallTime) + ":" + key);
-                        deadlocks++;
-                     }
-                  }
-                  m.put(key, checkpointMap.get(key));
-               }
-
-               StringBuilder sb = new StringBuilder();
-               sb.append("Deadlocked/slow threads (of "+checkpointMap.size()+"): ");
-               if (stalledThreads.isEmpty()) {
-                  sb.append("NONE");
-               } else {
-                  sb.append("total="+stalledThreads.size()+":: ");
-                  Collections.sort(stalledThreads);
-                  for (int j = stalledThreads.size()-1; j >= 0; j--) {
-                     String string = stalledThreads.get(j);
-                     sb.append(string.substring(string.indexOf(':')+1) + "(" + string.substring(0, string.indexOf(':')) + "s):");
-                  }
-               }
-               log.info(sb.toString());
-
-               try {
-                  Thread.sleep(10 * 1000);
-               } catch (InterruptedException e) {
-                  e.printStackTrace();
+      while (true) {
+         if (checkpointMap.size() == 0) {
+            log.info("All test threads complete... monitoring exiting");
+            break;
+         }
+         int deadlocks = 0;
+         List<String> stalledThreads = new ArrayList<String>();
+         for (String key : checkpointMap.keySet()) {
+            if (m.containsKey(key)) {
+               if (m.get(key).equals(checkpointMap.get(key))) {
+                  double stallTime = (new Date().getTime() - checkpointMap.get(key).getTime()) / 1000.0d;
+                  stalledThreads.add(df.format(stallTime) + ":" + key);
+                  deadlocks++;
                }
             }
+            m.put(key, checkpointMap.get(key));
          }
-      }).start();
+
+         StringBuilder sb = new StringBuilder();
+         sb.append("Deadlocked/slow threads (of "+checkpointMap.size()+"): ");
+         if (stalledThreads.isEmpty()) {
+            sb.append("NONE");
+         } else {
+            sb.append("total="+stalledThreads.size()+":: ");
+            Collections.sort(stalledThreads);
+            for (int j = stalledThreads.size()-1; j >= 0; j--) {
+               String string = stalledThreads.get(j);
+               sb.append(string.substring(string.indexOf(':')+1) + "(" + string.substring(0, string.indexOf(':')) + "s):");
+            }
+         }
+         log.info(sb.toString());
+
+         try {
+            Thread.sleep(2 * 1000);
+         } catch (InterruptedException e) {
+            e.printStackTrace();
+         }
+      }
    }
 
 }
