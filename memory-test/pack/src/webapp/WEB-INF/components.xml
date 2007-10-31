@@ -3,7 +3,16 @@
 
 <beans>
 
+   <bean class="org.sakaiproject.testrunner.util.TestExecutor">
+      <property name="testClassname"
+         value="org.sakaiproject.memory.test.LoadTestSakaiCaches" />
+      <property name="testType" value="testrunner.load" />
+      <property name="registerTest" value="true" />
+      <property name="testDelaySeconds" value="30" />
+   </bean>
+
    <!-- test registering and running beans -->
+<!-- 
    <bean class="org.sakaiproject.testrunner.util.TestExecutor">
       <property name="testClassname"
          value="org.sakaiproject.memory.test.LoadTestMemoryService" />
@@ -11,5 +20,6 @@
       <property name="registerTest" value="true" />
       <property name="testDelaySeconds" value="30" />
    </bean>
+-->
 
 </beans>
