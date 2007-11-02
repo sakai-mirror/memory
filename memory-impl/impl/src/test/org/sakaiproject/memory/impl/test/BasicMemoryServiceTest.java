@@ -11,6 +11,7 @@ import org.apache.commons.logging.LogFactory;
 
 import org.sakaiproject.event.api.Event;
 import org.sakaiproject.memory.api.Cache;
+import org.sakaiproject.memory.api.CacheConfig;
 import org.sakaiproject.memory.api.CacheRefresher;
 import org.sakaiproject.memory.api.DerivedCache;
 import org.sakaiproject.memory.impl.BasicMemoryService;
@@ -79,7 +80,7 @@ public class BasicMemoryServiceTest extends AbstractSingleSpringContextTests {
       StringBuilder sb = new StringBuilder();
       sb.append("Loaded up the cache manager with "+basicCachesCount+" caches:\n");
       for (int i = 0; i < caches.length; i++) {
-         sb.append("Cache " + i + ": " + caches[i] + ", size:" + cacheManager.getCache(caches[i]).getSize() + "\n");
+         sb.append("Cache " + i + ": " + caches[i] + ", size:" + cacheManager.getEhcache(caches[i]).getSize() + "\n");
       }
       log.info(sb.toString());
    };
@@ -190,7 +191,7 @@ public class BasicMemoryServiceTest extends AbstractSingleSpringContextTests {
    public void testNewCacheStringCacheRefresherDerivedCacheBooleanBoolean() {
 
       // test creating the cache with normal options
-      Cache cache1 = memoryService.newCache(CACHENAME1, null, null, true, false);
+      Cache cache1 = memoryService.newCache(CACHENAME1, new CacheConfig());
       assertNotNull(cache1);
       cache1.put("2.1", "thing");
       cache1.put("2.2", "thing");
@@ -198,7 +199,7 @@ public class BasicMemoryServiceTest extends AbstractSingleSpringContextTests {
       assertEquals(2, cache1.getSize());
 
       // test adding in the listeners
-      CacheRefresher refresher = new CacheRefresher() {
+      CacheRefresher loader = new CacheRefresher() {
          public Object refresh(Object key, Object oldValue, Event event) {
             if (key.equals("TESTKEY")) {
                return "UPDATED";
@@ -208,7 +209,7 @@ public class BasicMemoryServiceTest extends AbstractSingleSpringContextTests {
       };
 
       // test creating a cache with a refresher and see if it works
-      Cache cache2 = memoryService.newCache(CACHENAME2, refresher, null, true, false);
+      Cache cache2 = memoryService.newCache(CACHENAME2, new CacheConfig(loader, null));
       assertNotNull(cache2);
       assertEquals(0, cache2.getSize());
       assertNull(cache2.get("INVALID"));
@@ -229,7 +230,7 @@ public class BasicMemoryServiceTest extends AbstractSingleSpringContextTests {
          }
       };
 
-      Cache cache3 = memoryService.newCache(CACHENAME3, null, eventListener, true, false);
+      Cache cache3 = memoryService.newCache(CACHENAME3, new CacheConfig(null, eventListener));
       assertNotNull(cache3);
       assertEquals(0, cache3.getSize());
       assertNull(status[0]);
@@ -237,7 +238,7 @@ public class BasicMemoryServiceTest extends AbstractSingleSpringContextTests {
       assertEquals("PUT", status[0]);
       cache3.remove("3.1");
       assertEquals("REMOVE", status[0]);
-      cache3.clear();
+      cache3.resetCache();
       assertEquals("CLEAR", status[0]);
       assertEquals(0, cache3.getSize());
 

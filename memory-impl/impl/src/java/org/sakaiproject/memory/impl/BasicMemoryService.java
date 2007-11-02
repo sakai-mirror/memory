@@ -29,15 +29,16 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import net.sf.ehcache.Ehcache;
 import net.sf.ehcache.Statistics;
+import net.sf.ehcache.constructs.blocking.BlockingCache;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.sakaiproject.authz.api.SecurityService;
 import org.sakaiproject.event.api.EventTrackingService;
 import org.sakaiproject.memory.api.Cache;
+import org.sakaiproject.memory.api.CacheConfig;
 import org.sakaiproject.memory.api.CacheRefresher;
 import org.sakaiproject.memory.api.Cacher;
-import org.sakaiproject.memory.api.DerivedCache;
 import org.sakaiproject.memory.api.MemoryService;
 import org.sakaiproject.memory.api.MultiRefCache;
 import org.sakaiproject.memory.exception.MemoryPermissionException;
@@ -92,6 +93,11 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
       this.eventTrackingService = eventTrackingService;
    }
 
+   protected CacheConfig defaultConfig;
+   public void setDefaultConfig(CacheConfig defaultConfig) {
+      this.defaultConfig = defaultConfig;
+   }
+
 
    public void init() {
       M_log.info("init()");
@@ -99,24 +105,45 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
       if (cacheManager == null)
          throw new IllegalStateException("CacheManager was not injected properly!");
 
-//    try {
-//    get notified of events to watch for a reset
-//    eventTrackingService().addObserver(this); // No longer using event tracking with cache
-//    } catch (Throwable t) {
-//    M_log.warn("init(): ", t);
-//    }
-   } // init
+      defaultConfig = setConfigDefaults(defaultConfig);
+      // TODO pick up caching defaults from sakai properties maybe -AZ
+   }
+
+
+   /**
+    * Set the configuration defaults and create a cache config if it is null
+    * @param config a config with some settings
+    * @return the config with the defaults set on null items
+    */
+   private CacheConfig setConfigDefaults(CacheConfig config) {
+      if (config == null) {
+         if (defaultConfig != null) {
+            config = defaultConfig;
+         } else {
+            config = new CacheConfig();
+         }
+      }
+      if (config.getDistributed() == null) {
+         config.setDistributed(true);
+      }
+      if (config.getReplicated() == null) {
+         config.setReplicated(false);
+      }
+      if (config.getBlocking() == null) {
+         if (config.getLoader() == null) {
+            config.setBlocking(false);
+         } else {
+            config.setBlocking(true);
+         }
+      }
+      return config;
+   }
 
    /**
     * Returns to uninitialized state.
     */
    public void destroy() {
       M_log.info("destroy()");
-
-      // if we are not in a global shutdown, remove my event notification registration
-      // if (!ComponentManager.hasBeenClosed()) {
-      // eventTrackingService().deleteObserver(this);
-      // }
 
       cacheManager.clearAll();
       cachesRecord.clear();
@@ -125,7 +152,7 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
 
    public long getAvailableMemory() {
       return Runtime.getRuntime().freeMemory();
-   } // getAvailableMemory
+   }
 
    public String getStatus() {
       final StringBuilder sb = new StringBuilder();
@@ -164,7 +191,10 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
 
 
    /**
-    * Generate some stats for this cache
+    * Generate some stats for this cache,
+    * note that this is not cheap so do not use it very often
+    * @param cache an Ehcache
+    * @return the stats of this cache as a string
     */
    protected static String generateCacheStats(Ehcache cache) {
       StringBuilder sb = new StringBuilder();
@@ -188,23 +218,26 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
 
 
    public Cache newCache(String cacheName) {
-      return newCache(cacheName, null, null, true, false);
+      return newCache(cacheName, (CacheConfig) null);
    }
 
-   public Cache newCache(String cacheName, CacheRefresher refresher, DerivedCache notifer,
-         boolean distributed, boolean replicated) {
+   public Cache newCache(String cacheName, CacheConfig config) {
       if (cacheName == null || "".equals(cacheName)) {
          throw new IllegalArgumentException("cacheName cannot be null or empty string");
       }
 
+      // set the defaults for the cache config (also ensures no null Booleans)
+      config = setConfigDefaults(config);
+
       // TODO - handle the distributed and replicated settings
-      if (distributed || replicated) {
+      if (config.getDistributed() || config.getReplicated()) {
          M_log.warn("boolean distributed, boolean replicated not being handled yet");
       }
 
       Cache c = cachesRecord.get(cacheName);
       if (c == null) {
-         c = new MemCache(instantiateCache(cacheName), refresher, notifer);
+         Ehcache ec = instantiateCache(cacheName, config);
+         c = new MemCache(ec, config);
       }
       cachesRecord.put(cacheName, c);
 
@@ -267,10 +300,10 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
 
       M_log.info("doReset():  Low Memory Recovery to: " + Runtime.getRuntime().freeMemory());
 
-   } // doReset
+   }
 
    /**
-    * Create a cache using the supplied name (with default settings) 
+    * Create an EhCache using the supplied name (with default settings) 
     * or get the cache out of spring or the current configured cache
     * Will proceed in this order:
     * 1) Attempt to load a bean with the name of the cache
@@ -280,7 +313,7 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
     * @param cacheName the name of the cache
     * @return a cache instance
     */
-   private Ehcache instantiateCache(String cacheName) {
+   private Ehcache instantiateCache(String cacheName, CacheConfig config) {
       if (M_log.isDebugEnabled())
          M_log.debug("instantiateCache(String " + cacheName + ")");
 
@@ -305,6 +338,14 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
             M_log.info("Created new Cache (from default settings): " + cacheName);
          }
          cache = cacheManager.getEhcache(cacheName);
+      }
+      // make this a blocking cache if needed
+      if (config.getBlocking()) {
+         if (!(cache instanceof BlockingCache)) {
+            // decorate and substitute
+            BlockingCache newBlockingCache = new BlockingCache(cache);
+            cacheManager.replaceCacheWithDecoratedCache(cache, newBlockingCache);
+         }
       }
       if (M_log.isDebugEnabled())
          M_log.debug(cacheName + " settings: " + cache);
@@ -336,7 +377,9 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
     */
    public Cache newCache(String cacheName, CacheRefresher refresher, String pattern) {
       M_log.warn("deprecated method, do NOT use");
-      return newCache(cacheName, refresher, null, true, false);
+      CacheConfig config = setConfigDefaults(null);
+      config.setLoader(refresher);
+      return newCache(cacheName, config);
 //      return new MemCache(this, eventTrackingService, refresher, pattern, instantiateCache(cacheName));
    }
 
@@ -352,8 +395,8 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
       if (mrc == null) {
          mrc = new MultiRefCacheImpl(this, 
                eventTrackingService, 
-               instantiateCache(cacheName),
-               instantiateCache(ORG_SAKAIPROJECT_MEMORY_MEMORY_SERVICE_MREF_MAP));
+               instantiateCache(cacheName, defaultConfig),
+               instantiateCache(ORG_SAKAIPROJECT_MEMORY_MEMORY_SERVICE_MREF_MAP, defaultConfig));
       }
       cachesRecord.put(cacheName, mrc);
 
@@ -367,7 +410,7 @@ public class BasicMemoryService implements MemoryService, ApplicationContextAwar
     */
    public Cache newCache(String cacheName, String pattern) {
       M_log.warn("deprecated method, do NOT use: newCache(String cacheName, String pattern)");
-      return newCache(cacheName, null, null, true, false);
+      return newCache(cacheName);
 //      return new MemCache(this, eventTrackingService, pattern, instantiateCache(cacheName));
    }
 

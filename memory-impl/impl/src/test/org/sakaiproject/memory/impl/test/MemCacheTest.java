@@ -28,9 +28,9 @@ public class MemCacheTest extends AbstractSingleSpringContextTests {
    protected CacheManager cacheManager = null;
    protected int basicCachesCount = 0;
 
-   final String CACHENAME1 = "cache 1";
-   final String CACHENAME2 = "cache 2";
-   final String CACHENAME3 = "cache 3";
+   final String CACHENAME1 = "cache-1";
+   final String CACHENAME2 = "cache-2";
+   final String CACHENAME3 = "cache-3";
 
 
 // private EntityManager entityManager;
@@ -65,7 +65,7 @@ public class MemCacheTest extends AbstractSingleSpringContextTests {
 
       // setup the test objects
       cacheManager.addCache(CACHENAME1);
-      testCache = new MemCache(cacheManager.getEhcache(CACHENAME1), null, null);
+      testCache = new MemCache(cacheManager.getEhcache(CACHENAME1), null);
    }
 
    @Override 
@@ -81,13 +81,13 @@ public class MemCacheTest extends AbstractSingleSpringContextTests {
    public void testMemCacheEhcacheCacheRefresherDerivedCache() {
       // make sure general creation works
       cacheManager.addCache(CACHENAME2);
-      MemCache cache = new MemCache(cacheManager.getEhcache(CACHENAME2), null, null);
+      MemCache cache = new MemCache(cacheManager.getEhcache(CACHENAME2), null);
       assertNotNull(cache);
 
       // test that a cache which is not active fails
       Ehcache cache3 = new Cache(CACHENAME3, 1000, false, false, 1000, 1000);
       try {
-         cache = new MemCache(cache3, null, null);
+         cache = new MemCache(cache3, null);
          fail("Should not have gotten here");
       } catch (IllegalArgumentException e) {
          assertNotNull(e.getMessage());
@@ -95,7 +95,7 @@ public class MemCacheTest extends AbstractSingleSpringContextTests {
 
       // test if including null causes failure
       try {
-         cache = new MemCache((Ehcache)null, null, null);
+         cache = new MemCache((Ehcache)null, null);
          fail("Should not have gotten here");
       } catch (NullPointerException e) {
          assertNotNull(e.getMessage());

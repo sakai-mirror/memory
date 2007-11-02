@@ -29,45 +29,38 @@ import java.util.Observable;
 import java.util.Set;
 import java.util.Vector;
 
+import net.sf.ehcache.CacheException;
 import net.sf.ehcache.Ehcache;
 import net.sf.ehcache.Element;
 import net.sf.ehcache.Status;
+import net.sf.ehcache.event.CacheEventListener;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.sakaiproject.event.api.Event;
 import org.sakaiproject.event.api.EventTrackingService;
 import org.sakaiproject.memory.api.Cache;
+import org.sakaiproject.memory.api.CacheConfig;
 import org.sakaiproject.memory.api.CacheRefresher;
 import org.sakaiproject.memory.api.DerivedCache;
 
 /**
- * An abstraction of the caching system for Sakai<br/>
+ * An abstraction of a cache for the caching system for Sakai<br/>
  * This allows the developer to access a cache created for their use,
  * create this cache using the {@link MemoryService}
  */
-public class MemCache implements Cache {
+public class MemCache implements Cache, CacheEventListener {
 
    /** Our logger. */
    private static Log log = LogFactory.getLog(MemCache.class);
 
    /** Underlying cache implementation */
-   protected net.sf.ehcache.Ehcache cache;
-
-   /** The object that will deal with missing entries. */
-   protected CacheRefresher m_refresher = null;
-
-   /** This is the notifier for this cache (if one is set) */
-   protected DerivedCache m_derivedCache = null;
+   protected Ehcache cache;
 
    /**
-    * is this cache distributed, if false then it is local only
+    * The configuration for this cache
     */
-   protected boolean distributed = true;
-   /**
-    * is this cache replicated, if false then entries are not copied over to other nodes in the cluster
-    */
-   protected boolean replicated = false;
+   protected CacheConfig config = new CacheConfig();
 
 
    /**
@@ -75,10 +68,9 @@ public class MemCache implements Cache {
     * refresher (if one is supplied)<br/>
     * We do not recommend creating this manually, you should instead use {@link MemoryService#newCache(String)}
     * @param cache an ehCache (already initialized)
-    * @param refresher (optional) an object that implements {@link CacheRefresher} or null
-    * @param notifier (optional) an object that implements {@link DerivedCache} or null
+    * @param cacheConfig the configuration for this cache, see {@link CacheConfig} for details
     */
-   public MemCache(Ehcache cache, CacheRefresher refresher, DerivedCache notifier) {
+   public MemCache(Ehcache cache, CacheConfig cacheConfig) {
       // setup the cache
       if (cache == null) {
          throw new NullPointerException("cache must be set");
@@ -87,9 +79,26 @@ public class MemCache implements Cache {
             throw new IllegalArgumentException("Cache must already be initialized and alive");
          }
       }
-      m_refresher = refresher;
-      m_derivedCache = notifier;
       this.cache = cache;
+
+      if (cacheConfig != null) {
+         config = cacheConfig;
+      }
+
+      // register the notifier
+      attachDerivedCache(config.getNotifer());
+      attachLoader(config.getLoader());
+
+      // set to all false if null to avoid NPEs, this should not really happen because this should be coming in all setup from the MemoryService
+      if (config.getDistributed() == null) {
+         config.setDistributed(false);
+      }
+      if (config.getBlocking() == null) {
+         config.setBlocking(false);
+      }
+      if (config.getReplicated() == null) {
+         config.setReplicated(false);
+      }
    }
 
    public void put(String key, Object payload) {
@@ -98,20 +107,18 @@ public class MemCache implements Cache {
       if (key == null || "".equals(key)) {
          throw new IllegalArgumentException("key cannot be null or empty string");
       }
-      
-      if (distributed == true || cache.isOverflowToDisk()) {
+
+      if (config.getDistributed() == true || cache.isOverflowToDisk()) {
          if (! (key instanceof Serializable)) {
             log.warn("Using non-serializable key for distributed or disk stored cache (" + cache.getName() +
-                  ") is bad since things will not work, please make sure your key is serializable");
+            ") is bad since things will not work, please make sure your key is serializable");
          } else if (! (payload instanceof Serializable)) {
             log.warn("Using non-serializable payload for distributed or disk stored cache (" + cache.getName() + 
-                  ") is bad since things will not work, please make sure your payload is serializable");
+            ") is bad since things will not work, please make sure your payload is serializable");
          }
       }
 
       cache.put(new Element(key, payload));
-
-      if (m_derivedCache != null) m_derivedCache.notifyCachePut(key, payload); // TODO - handle this with ehcache notifiers
    }
 
 
@@ -124,7 +131,7 @@ public class MemCache implements Cache {
       }
 
       return cache.isKeyInCache(key);
-   } // containsKey
+   }
 
 
    public Object get(String key) {
@@ -138,9 +145,9 @@ public class MemCache implements Cache {
       if (containsKey(key)) {
          payload = getCachePayload(key);
       } else {
-         if (m_refresher != null) {
+         if (config.getLoader() != null) {
             // TODO - handle this with a blocking cache before merging -AZ
-            payload = m_refresher.refresh(key, null, null);
+            payload = config.getLoader().refresh(key, null, null);
             if (payload != null) {
                put(key, payload);
             }
@@ -175,47 +182,35 @@ public class MemCache implements Cache {
       if (log.isDebugEnabled()) log.debug("remove(" + key + ")");
 
       // disabled for backwards compatibility -AZ
-//      if (key == null || "".equals(key)) {
-//         throw new IllegalArgumentException("key cannot be null or empty string");
-//      }
+//    if (key == null || "".equals(key)) {
+//    throw new IllegalArgumentException("key cannot be null or empty string");
+//    }
 
       if (containsKey(key)) {
-         // get the value out to send to the notifier
-         final Object payload = getCachePayload(key);
-
-         // remove the entry
          cache.remove(key);
-
-         if (m_derivedCache != null) {
-            m_derivedCache.notifyCacheRemove(key, payload); // TODO - handle this with ehcache notifiers
-         }
-      }
-
-   } // remove
-
-
-   public void clear() {
-      resetCache();
-   } // clear
-
-
-   public void attachDerivedCache(DerivedCache cacheEventListener) {
-      // Note: only one is supported
-      if (cacheEventListener == null) {
-         m_derivedCache = null;
-      } else {
-         // TODO shouldn't we allow someone to attach a new listener? -AZ
-         if (m_derivedCache != null) {
-            log.warn("attachDerivedCache - already got one and will not override (not sure why we won't though)");
-         } else {
-            m_derivedCache = cacheEventListener;
-         }
       }
    }
 
 
+   public void clear() {
+      resetCache();
+   }
+
+
+   public void attachDerivedCache(DerivedCache cacheEventListener) {
+      if (cacheEventListener == null) {
+         // unregister this class as a listener if this is null
+         cache.getCacheEventNotificationService().unregisterListener(this);
+      } else {
+         // register this class as a listener for itself if notifier is set
+         cache.getCacheEventNotificationService().registerListener(this);
+      }
+      config.setNotifer(cacheEventListener);
+   }
+
+
    public void attachLoader(CacheRefresher cacheLoader) {
-      m_refresher = cacheLoader;
+      config.setLoader(cacheLoader);
    }
 
 
@@ -227,10 +222,16 @@ public class MemCache implements Cache {
       log.debug("clearing cache");
 
       cache.removeAll();  //TODO Do we boolean doNotNotifyCacheReplicators? Ian? -I think we do want to notify the replicators unless we are trying to support clearing the cache on one server only (the repicator will refill this cache though) -AZ
-      cache.clearStatistics();
-
-      if (m_derivedCache != null) m_derivedCache.notifyCacheClear(); // TODO - handle this with ehcache notifiers
+      clearCache();
    } // resetCache
+
+   /**
+    * clear the stats and send the notification
+    */
+   private void clearCache() {
+      cache.clearStatistics();
+      if (config.getNotifer() != null) config.getNotifer().notifyCacheClear();
+   }
 
    public long getSize() {
       log.debug("getSize()");
@@ -242,7 +243,56 @@ public class MemCache implements Cache {
       return BasicMemoryService.generateCacheStats(cache);
    }
 
-   
+   /********************************************************************
+    * EhCache listener (to handle cache notifications)
+    */
+
+   public void notifyElementPut(Ehcache cache, Element element) throws CacheException {
+      if (config.getNotifer() != null) {
+         // get the key and then value to send along to the notifier
+         String key = element.getKey().toString();
+         config.getNotifer().notifyCachePut(key, getCachePayload(key) );
+      }
+   }
+
+   public void notifyElementRemoved(Ehcache cache, Element element) throws CacheException {
+      if (config.getNotifer() != null) {
+         // get the key and then value to send along to the notifier
+         String key = element.getKey().toString();
+         config.getNotifer().notifyCacheRemove(key, getCachePayload(key) );
+      }
+   }
+
+   public void notifyRemoveAll(Ehcache cache) {
+      clearCache(); // this calls the notifier if there is one
+   }
+
+   public void notifyElementEvicted(Ehcache cache, Element element) {
+      // do nothing
+   }
+
+   public void notifyElementExpired(Ehcache cache, Element element) {
+      // do nothing
+   }
+
+   public void notifyElementUpdated(Ehcache cache, Element element) throws CacheException {
+      // do nothing
+   }
+
+   public void dispose() {
+      // do nothing
+   }
+
+   /**
+    * @see CacheEventListener#clone()
+    */
+   @Override
+   public Object clone() throws CloneNotSupportedException {
+      // Creates a clone of this listener. This method will only be called by ehcache before a cache is initialized.
+      throw new CloneNotSupportedException("MemCache does not support clone");
+   }
+
+
 
 
    /**********************************************************************************************************************
@@ -287,7 +337,7 @@ public class MemCache implements Cache {
    public MemCache(BasicMemoryService memoryService,
          EventTrackingService eventTrackingService, Ehcache cache)
    {
-      this(cache, null, null);
+      this(cache, null);
       log.warn("deprecated MemCache constructor, do not use");
       m_eventTrackingService = eventTrackingService;
    }
@@ -305,16 +355,17 @@ public class MemCache implements Cache {
          EventTrackingService eventTrackingService,
          CacheRefresher refresher, String pattern, Ehcache cache)
    {
-      this(cache, refresher, null);
+      this(cache, null);
+      config.setLoader(refresher);
       log.warn("deprecated MemCache constructor, do not use");
       m_eventTrackingService = eventTrackingService;
       m_resourcePattern = pattern;
 
       // register to get events - first, before others
-//      if (pattern != null)
-//      {
-//         m_eventTrackingService.addPriorityObserver(this);
-//      }
+//    if (pattern != null)
+//    {
+//    m_eventTrackingService.addPriorityObserver(this);
+//    }
    }
 
    /**
@@ -330,7 +381,8 @@ public class MemCache implements Cache {
          EventTrackingService eventTrackingService,
          CacheRefresher refresher, long sleep, Ehcache cache)
    {
-      this(cache, refresher, null);
+      this(cache, null);
+      config.setLoader(refresher);
       log.warn("deprecated MemCache constructor, do not use");
       m_eventTrackingService = eventTrackingService;
    }
@@ -346,7 +398,8 @@ public class MemCache implements Cache {
          EventTrackingService eventTrackingService,
          CacheRefresher refresher, Ehcache cache)
    {
-      this(cache, refresher, null);
+      this(cache, null);
+      config.setLoader(refresher);
       log.warn("deprecated MemCache constructor, do not use");
       m_eventTrackingService = eventTrackingService;
    }
@@ -364,7 +417,7 @@ public class MemCache implements Cache {
          EventTrackingService eventTrackingService, long sleep,
          String pattern, Ehcache cache)
    {
-      this(cache, null, null);
+      this(cache, null);
       log.warn("deprecated MemCache constructor, do not use");
       m_eventTrackingService = eventTrackingService;
       m_resourcePattern = pattern;
@@ -388,8 +441,8 @@ public class MemCache implements Cache {
       m_resourcePattern = pattern;
    }
 
-   
-   
+
+
    /**
     * Cache an object
     * 
@@ -666,10 +719,10 @@ public class MemCache implements Cache {
       if (m_complete)
       {
          // we can only get it cached if we have a refresher
-         if (m_refresher != null)
+         if (config.getLoader() != null)
          {
             // ask the refresher for the value
-            Object value = m_refresher.refresh(key, oldValue, event);
+            Object value = config.getLoader().refresh(key, oldValue, event);
             if (value != null)
             {
                put(key, value);
@@ -692,10 +745,10 @@ public class MemCache implements Cache {
          if (m_partiallyComplete.contains(path))
          {
             // we can only get it cached if we have a refresher
-            if (m_refresher != null)
+            if (config.getLoader() != null)
             {
                // ask the refresher for the value
-               Object value = m_refresher.refresh(key, oldValue, event);
+               Object value = config.getLoader().refresh(key, oldValue, event);
                if (value != null)
                {
                   put(key, value);
@@ -798,10 +851,10 @@ public class MemCache implements Cache {
          // if it has been garbage collected, and we can, refresh it
          if (payload == null)
          {
-            if ((m_refresher != null) && (key != null))
+            if ((config.getLoader() != null) && (key != null))
             {
                // ask the refresher for the value
-               payload = m_refresher.refresh(key, null, null);
+               payload = config.getLoader().refresh(key, null, null);
 
                // store this new value
                put(key, payload);
