@@ -36,6 +36,7 @@ import org.sakaiproject.event.api.Event;
  * Utility API for classes that will refresh a cache entry when expired.
  */
 public interface CacheRefresher {
+   // TODO - rename this to CacheLoader or something like that -AZ
 
    /**
     * Attempt to retrieve a value for this key from the cache user when none can be found in the cache

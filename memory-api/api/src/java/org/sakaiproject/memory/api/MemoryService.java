@@ -57,7 +57,7 @@ public interface MemoryService {
     * Construct a Cache with the given name (often this is the fully qualified classpath of the api 
     * for the service that is being cached or the class if there is no api) or retrieve the one
     * that already exists with this name,
-    * this will operate on system defaults and will be a distributed cache without replication
+    * this will operate on system defaults (probably a distributed cache without replication)
     * @param cacheName Load a defined bean from the application context with this name or create a default cache with this name
     * @return a cache which can be used to store objects
     */
@@ -70,14 +70,10 @@ public interface MemoryService {
     * Automatic refresh handling if refresher is not null and notification of cache changes
     * if notifier is not null.
     * @param cacheName Load a defined bean from the application context with this name or create a default cache with this name
-    * @param refresher The object that will handle refreshing of entries which are not found
-    * @param notifer The object that will handle notifications which are a result of cache changes
-    * @param distributed if true this cache will be distributed across the cluster, otherwise it is local to the current server only
-    * @param replicated if true this cache will replicate cached objects across the cluster nodes, 
-    * otherwise the cache will just expire entries in the other caches and they will have to reload on that cluster node
+    * @param config Create the cache using the supplied configuration, see {@link CacheConfig} for details
     * @return a cache which can be used to store objects
     */
-   public Cache newCache(String cacheName, CacheRefresher refresher, DerivedCache notifer, boolean distributed, boolean replicated);
+   public Cache newCache(String cacheName, CacheConfig config);
 
    /**
     * Flushes and destroys the cache with this name<br/>

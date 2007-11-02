@@ -56,8 +56,9 @@ public interface DerivedCache {
 	/**
 	 * This method is called when an object is removed from the associated cache
 	 * (this is only called when the object is explicitly removed and not when 
-	 * it expires, if you want to know when objects expire you should look at
-	 * {@link CacheRefresher})
+	 * it expires), this method blocks the removal until it completes and an exception
+	 * will cause the item to not be removed<br/>
+	 * <b>NOTE:</b> this is NOT called when a cache is reset (all items are removed)
 	 * 
     * @param key the key for the object being placed in the cache
     * @param payload the object being placed in the cache
