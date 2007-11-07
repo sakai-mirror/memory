@@ -4,9 +4,9 @@
    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
    <modelVersion>4.0.0</modelVersion>
-   <name>sakai-memory-test-impl</name>
+   <name>sakai-memory-test-tests</name>
    <groupId>org.sakaiproject</groupId>
-   <artifactId>sakai-memory-test-impl</artifactId>
+   <artifactId>sakai-memory-test-tests</artifactId>
    <organization>
       <name>University of Cambridge</name>
       <url>http://caret.cam.ac.uk/</url>
@@ -149,9 +149,9 @@
    <build>
       <resources>
          <resource>
-            <directory>${basedir}/src/bundle</directory>
+            <directory>${basedir}/src/resoureces</directory>
             <includes>
-               <include>**/*.properties</include>
+               <include>**/*.xml</include>
             </includes>
             <filtering>false</filtering>
          </resource>

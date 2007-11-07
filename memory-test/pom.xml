@@ -21,9 +21,27 @@
       <relativePath>../pom.xml</relativePath>
    </parent>
 
+   <!-- profiles so we can package these tests as a webapp or as a component -->
+   <profiles>
+      <profile>
+         <id>webapp</id>
+         <modules>
+            <module>tool</module>
+         </modules>
+      </profile>
+      <profile>
+         <id>component</id>
+         <activation>
+            <activeByDefault>true</activeByDefault>
+         </activation>
+         <modules>
+            <module>pack</module>
+         </modules>
+      </profile>
+   </profiles>
+
    <modules>
-      <module>impl</module>
-      <module>pack</module>
+      <module>test</module>
    </modules>
 
 </project>
