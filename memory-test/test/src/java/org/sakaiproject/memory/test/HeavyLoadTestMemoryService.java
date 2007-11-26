@@ -199,15 +199,5 @@ public class HeavyLoadTestMemoryService extends SpringTestCase {
       return results;
    }
 
-
-   /**
-    * @param loopCount total number of operations
-    * @param totalMilliSecs total number of milliseconds
-    * @return the number of microsecs per operation
-    */
-   private String calcUSecsPerOp(long loopCount, long totalMilliSecs) {
-      return df.format(((double)(totalMilliSecs * 1000))/((double)loopCount));
-   }
-
 }
 

@@ -5,16 +5,11 @@
 package org.sakaiproject.memory.test;
 
 import java.text.DecimalFormat;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -67,8 +62,6 @@ public class LoadTestMemoryService extends SpringTestCase {
    protected final String INSERT = "insert";
    protected final String REMOVE = "remove";
    protected final String GET = "get";
-
-   private Map<String, Date> checkpointMap = new ConcurrentHashMap<String, Date>();
 
 
    @Override
@@ -147,7 +140,7 @@ public class LoadTestMemoryService extends SpringTestCase {
       int deleteCount = 0;
       Random rGen = new Random();
       String keyPrefix = "key-" + threadnum + "-";
-      checkpointMap.put(Thread.currentThread().getName(), new Date());
+      monitoringThread();
       long start = System.currentTimeMillis();
       for (int i = 0; i < iterations; i++) {
          int random = rGen.nextInt(100);
@@ -181,12 +174,12 @@ public class LoadTestMemoryService extends SpringTestCase {
             deleteCount++;
          }
          if (i > 0 && i % (iterations/5) == 0) {
-            checkpointMap.put(Thread.currentThread().getName(), new Date());
+            monitoringThread();
             //log.info("thread: " + threadnum + " " + (i*100/iterations) + "% complete");
          }
       }
       long total = System.currentTimeMillis() - start;
-      checkpointMap.remove(Thread.currentThread().getName());
+      endMonitoringThread();
       final String hitPercentage = ((hitCount+missCount) > 0) ? ((100l * hitCount) / (hitCount + missCount)) + "%" : "N/A";
       log.info("Thread "+threadnum+": completed "+iterations+" iterations with "+insertCount+" inserts " +
       		"and "+deleteCount+" removes and "+readCount+" reads " +
@@ -268,68 +261,6 @@ public class LoadTestMemoryService extends SpringTestCase {
             "get: " + results.get(GET) + " ms");
 
       return results;
-   }
-
-   /**
-    * @param loopCount total number of operations
-    * @param totalMilliSecs total number of milliseconds
-    * @return the number of microsecs per operation
-    */
-   private String calcUSecsPerOp(long loopCount, long totalMilliSecs) {
-      return df.format(((double)(totalMilliSecs * 1000))/((double)loopCount));
-   }
-
-   /**
-    * Monitor the other test threads and block this test from completing until all test threads complete
-    */
-   private void startThreadMonitor() {
-      // monitor the other running threads
-      Map<String, Date> m = new HashMap<String, Date>();
-      log.info("Starting up monitoring of test threads...");
-      try {
-         Thread.sleep(3 * 1000);
-      } catch (InterruptedException e) {
-         e.printStackTrace();
-      }
-
-      while (true) {
-         if (checkpointMap.size() == 0) {
-            log.info("All test threads complete... monitoring exiting");
-            break;
-         }
-         int deadlocks = 0;
-         List<String> stalledThreads = new ArrayList<String>();
-         for (String key : checkpointMap.keySet()) {
-            if (m.containsKey(key)) {
-               if (m.get(key).equals(checkpointMap.get(key))) {
-                  double stallTime = (new Date().getTime() - checkpointMap.get(key).getTime()) / 1000.0d;
-                  stalledThreads.add(df.format(stallTime) + ":" + key);
-                  deadlocks++;
-               }
-            }
-            m.put(key, checkpointMap.get(key));
-         }
-
-         StringBuilder sb = new StringBuilder();
-         sb.append("Deadlocked/slow threads (of "+checkpointMap.size()+"): ");
-         if (stalledThreads.isEmpty()) {
-            sb.append("NONE");
-         } else {
-            sb.append("total="+stalledThreads.size()+":: ");
-            Collections.sort(stalledThreads);
-            for (int j = stalledThreads.size()-1; j >= 0; j--) {
-               String string = stalledThreads.get(j);
-               sb.append(string.substring(string.indexOf(':')+1) + "(" + string.substring(0, string.indexOf(':')) + "s):");
-            }
-         }
-         log.info(sb.toString());
-
-         try {
-            Thread.sleep(2 * 1000);
-         } catch (InterruptedException e) {
-            e.printStackTrace();
-         }
-      }
    }
 
 }
