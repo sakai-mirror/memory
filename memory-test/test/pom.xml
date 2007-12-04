@@ -17,7 +17,7 @@
    <parent>
       <artifactId>sakai-memory-test</artifactId>
       <groupId>org.sakaiproject</groupId>
-      <version>M2</version>
+      <version>SNAPSHOT</version>
       <relativePath>../pom.xml</relativePath>
    </parent>
 
