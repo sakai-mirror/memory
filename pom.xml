@@ -10,12 +10,12 @@
   <name>Sakai Memory Project</name>
   <groupId>org.sakaiproject</groupId>
   <artifactId>memory-base</artifactId>
-  <version>2.9-SNAPSHOT</version>
+  <version>2.9.0-b01</version>
   <packaging>pom</packaging>
   <scm>
-    <connection>scm:svn:https://source.sakaiproject.org/svn/memory/branches/sakai-2.9.0-b01</connection>
-    <developerConnection>scm:svn:https://source.sakaiproject.org/svn/memory/branches/sakai-2.9.0-b01</developerConnection>
-    <url>https://source.sakaiproject.org/svn/memory/branches/sakai-2.9.0-b01</url>
+    <connection>scm:svn:https://source.sakaiproject.org/svn/memory/tags/sakai-2.9.0-b01</connection>
+    <developerConnection>scm:svn:https://source.sakaiproject.org/svn/memory/tags/sakai-2.9.0-b01</developerConnection>
+    <url>https://source.sakaiproject.org/svn/memory/tags/sakai-2.9.0-b01</url>
   </scm>
   <modules>
     <module>memory-tool/tool</module>
